@@ -483,3 +483,31 @@ averaged over the four, then mean ± standard deviation across seeds (`summarize
   seeds collapse to 8–20 cells, so the policies still depend heavily on the echoes; shuffled echoes hurt every echo agent.
 * **Seeds matter.** Per-building rankings change from seed to seed and collisions vary by a factor of 2–3 between seeds, so the
   single-seed conclusions of queues 3–5 about specific buildings or small gaps should be treated as provisional.
+
+## Map-building probe of the queue 6 explorers (queue 7 part A, 2026-11-10; `habitat_audio/probe_map.py`, `runs/probe/probe_summary.md`)
+
+Question: does an explorer's recurrent state hold a map? Each of the 12 queue 6 agents (4 sensors × 3 seeds) was rolled out with
+sampled actions in the 14 training buildings (3000 steps × 14 workers) and the 4 held-out buildings (6000 steps × 4). At every step the
+GRU state h_t (512), a pooled copy of the current observation, and two labels on an 11 × 11 egocentric grid of 0.5 m cells were stored:
+**local geometry** (navmesh walkable or not) and **visited** (that cell visited earlier in the episode). Linear and one-hidden-layer
+(256) decoders were trained on the training buildings and scored on the held-out buildings; per-cell AUROC averaged over the 120
+non-centre cells (0.5 = chance). Because visited cells are always walkable, a decoder can partly infer "visited" from visible geometry,
+so the clean memory score is **visited among walkable cells**.
+
+MLP decoders, held-out buildings, mean ± s.d. over three seeds:
+
+| agent | geometry from h_t | geometry from current obs | visited (walkable cells) from h_t | visited (walkable cells) from current obs |
+|---|---|---|---|---|
+| sonar image, fixed click | 0.803 ± 0.007 | 0.832 ± 0.002 | 0.762 ± 0.006 | 0.625 ± 0.009 |
+| sonar image + learned beam | 0.789 ± 0.016 | 0.779 ± 0.019 | 0.755 ± 0.010 | 0.579 ± 0.005 |
+| head-scan binaural | 0.755 ± 0.016 | 0.761 ± 0.018 | 0.757 ± 0.009 | 0.594 ± 0.011 |
+| blind (bump sensor) | 0.614 ± 0.002 | 0.503 ± 0.003 | **0.830 ± 0.011** | 0.515 ± 0.013 |
+
+* **Every explorer keeps an episodic record of its own path**, readable in buildings it never trained in: visited-cell AUROC 0.76–0.83
+  from the memory state against 0.52–0.63 from the current observation.
+* **The blind agents remember their path best** (0.83 vs ≈0.76 for all echo agents). Without perception of the walls, tracking its own
+  trajectory is the only way to avoid re-covering ground; agents that hear the room rely on it more.
+* **Geometry is mostly perceived, not remembered.** For the echo agents the current observation decodes local walkable space as well as or
+  slightly better than the memory state (sonar fixed click 0.83 vs 0.80), so the GRU keeps only part of what it hears. Blind agents
+  hold a weak wall map built from bumps alone (0.61, current bump bit 0.50).
+* Linear decoders give the same ordering at lower values (visited among walkable: blind 0.76, sonar 0.68, head-scan 0.71).

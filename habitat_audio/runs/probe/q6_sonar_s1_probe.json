@@ -1,0 +1,74 @@
+{
+ "occ/memory/linear": {
+  "auroc": 0.7881682220322381,
+  "auroc_front": 0.7984942695255469,
+  "auroc_behind": 0.7777481557154278,
+  "base_rate": 0.2803950607776642
+ },
+ "occ/memory/mlp": {
+  "auroc": 0.7972270984260384,
+  "auroc_front": 0.7977203815131476,
+  "auroc_behind": 0.7964098705939012,
+  "base_rate": 0.2803950607776642
+ },
+ "occ/observation/linear": {
+  "auroc": 0.8031371287595694,
+  "auroc_front": 0.7934534900031762,
+  "auroc_behind": 0.8160839091083906,
+  "base_rate": 0.2803950607776642
+ },
+ "occ/observation/mlp": {
+  "auroc": 0.830594945957979,
+  "auroc_front": 0.8241890310282248,
+  "auroc_behind": 0.839815208212925,
+  "base_rate": 0.2803950607776642
+ },
+ "vis/memory/linear/navigable": {
+  "auroc": 0.7056223668884566,
+  "auroc_front": 0.7050824559109649,
+  "auroc_behind": 0.7058127643263016,
+  "base_rate": 0.31683701276779175
+ },
+ "vis/memory/linear": {
+  "auroc": 0.7824571714030536,
+  "auroc_front": 0.7778251657736102,
+  "auroc_behind": 0.7885396571382498,
+  "base_rate": 0.1092732697725296
+ },
+ "vis/memory/mlp/navigable": {
+  "auroc": 0.7691174179685575,
+  "auroc_front": 0.762543122018958,
+  "auroc_behind": 0.7766962814293735,
+  "base_rate": 0.31683701276779175
+ },
+ "vis/memory/mlp": {
+  "auroc": 0.8612275418459101,
+  "auroc_front": 0.8541044965090191,
+  "auroc_behind": 0.8718575326865565,
+  "base_rate": 0.1092732697725296
+ },
+ "vis/observation/linear/navigable": {
+  "auroc": 0.6075285164151556,
+  "auroc_front": 0.5965517658661951,
+  "auroc_behind": 0.6214369955186532,
+  "base_rate": 0.31683701276779175
+ },
+ "vis/observation/linear": {
+  "auroc": 0.7705782235474611,
+  "auroc_front": 0.7607416973649176,
+  "auroc_behind": 0.7880517978343765,
+  "base_rate": 0.1092732697725296
+ },
+ "vis/observation/mlp/navigable": {
+  "auroc": 0.6123882409194207,
+  "auroc_front": 0.5977054717613215,
+  "auroc_behind": 0.629138439031671,
+  "base_rate": 0.31683701276779175
+ },
+ "vis/observation/mlp": {
+  "auroc": 0.7989794982409799,
+  "auroc_front": 0.785946084068775,
+  "auroc_behind": 0.8191444954739534,
+  "base_rate": 0.1092732697725296
+ }
+}

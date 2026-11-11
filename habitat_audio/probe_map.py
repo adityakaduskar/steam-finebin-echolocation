@@ -61,11 +61,13 @@ def collect(args):
     os.makedirs(os.path.dirname(args.out), exist_ok=True); np.savez_compressed(args.out, **out, keys=np.array(keys)); print("saved", args.out)
 
 
-def auroc(y, s):
-    """per-column AUROC (rank formulation); NaN for columns with one class"""
+def auroc(y, s, mask=None):
+    """per-column AUROC (rank formulation); NaN for columns with one class. mask (same shape, bool) restricts the samples per column"""
     res = []
     for j in range(y.shape[1]):
-        yj, sj = y[:, j], s[:, j]; P = yj.sum(); Nn = len(yj) - P
+        yj, sj = y[:, j], s[:, j]
+        if mask is not None: yj, sj = yj[mask[:, j]], sj[mask[:, j]]
+        P = yj.sum(); Nn = len(yj) - P
         if P == 0 or Nn == 0: res.append(np.nan); continue
         r = np.empty(len(sj)); r[np.argsort(sj, kind="mergesort")] = np.arange(1, len(sj) + 1)
         res.append((r[yj == 1].sum() - P * (P + 1) / 2) / (P * Nn))
@@ -96,6 +98,10 @@ def fit(args):
             for hidden in (0, 256):
                 s = fit_probe(Xtr, Ytr, Xte, hidden); a = auroc(Yte[:, keep], s[:, keep]); fr = rows[keep]
                 key = f"{target}/{'memory' if src == 'h' else 'observation'}/{'linear' if hidden == 0 else 'mlp'}"
+                if target == "vis":   # visited cells are always navigable: score memory only among navigable cells, so geometry cannot stand in for it
+                    occ_te = D["held_occ"].reshape(len(D["held_occ"]), -1)[:, keep].astype(bool); an = auroc(Yte[:, keep], s[:, keep], occ_te)
+                    res[key + "/navigable"] = {"auroc": float(np.nanmean(an)), "auroc_front": float(np.nanmean(an[fr > 0])), "auroc_behind": float(np.nanmean(an[fr < 0])), "base_rate": float(Yte[:, keep][occ_te].mean())}
+                    print(f"{os.path.basename(args.data):28s} {key + '/navigable':32s} AUROC {res[key + '/navigable']['auroc']:.3f}", flush=True)
                 res[key] = {"auroc": float(np.nanmean(a)), "auroc_front": float(np.nanmean(a[fr > 0])), "auroc_behind": float(np.nanmean(a[fr < 0])),
                             "base_rate": float(Yte[:, keep].mean())}
                 print(f"{os.path.basename(args.data):28s} {key:32s} AUROC {res[key]['auroc']:.3f}  (ahead {res[key]['auroc_front']:.3f}, behind {res[key]['auroc_behind']:.3f})  base rate {res[key]['base_rate']:.2f}", flush=True)
@@ -110,9 +116,9 @@ def summary(args):
     for pre, name in agents:
         R = [json.load(open(f)) for f in sorted(glob.glob(f"{args.dir}/{pre}_s[0-9]_probe.json"))]
         if not R: continue
-        for tgt, tname in (("occ", "local geometry"), ("vis", "visited (memory)")):
+        for tgt, tname, suf in (("occ", "local geometry", ""), ("vis", "visited", ""), ("vis", "visited, among walkable cells (memory)", "/navigable")):
             for dec in ("linear", "mlp"):
-                f = lambda src: (lambda v: f"{np.mean(v):.3f} ± {np.std(v):.3f}")([r[f"{tgt}/{src}/{dec}"]["auroc"] for r in R])
+                f = lambda src: (lambda v: f"{np.mean(v):.3f} ± {np.std(v):.3f}")([r[f"{tgt}/{src}/{dec}{suf}"]["auroc"] for r in R])
                 lines.append(f"| {name} (n={len(R)}) | {tname} | {dec} | {f('memory')} | {f('observation')} |")
     txt = "\n".join(lines) + "\n\nHeld-out-building AUROC averaged over the 120 non-centre cells of an 11 x 11 egocentric grid (0.5 m); 0.5 = chance."
     print(txt); open(f"{args.dir}/probe_summary.md", "w").write(txt + "\n")

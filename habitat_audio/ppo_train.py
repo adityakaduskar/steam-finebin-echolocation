@@ -30,15 +30,24 @@ TASKS = {
     "echo_audiogoal_nosliding": dict(goal_sound=True, self_click=True, pointgoal=False, sliding=False, contact=True),
 }
 # active sensing: sonar-image observation (range x azimuth from the ambisonic click response) and a policy-chosen click beam per step
+# forward-only narrow beams: cardioid^8 = ((1 + cos)/2)^8 (half-power ~ +-30 deg, nothing behind). The BEAMS above use dipole weight 1,
+# which Steam Audio evaluates as |cos|^4: a figure-eight that also fires backwards.
+FWD = lambda name, yaw: (name, yaw, 0.5, 8.0)
+BEAMS_FWD = (FWD("left90", 90.0), FWD("left45", 45.0), FWD("ahead", 0.0), FWD("right45", -45.0), FWD("right90", -90.0))
 BEAMS = (("none", 0.0, 0.0, 1.0), ("omni", 0.0, 0.0, 1.0), ("left", 45.0, 1.0, 4.0), ("ahead", 0.0, 1.0, 4.0), ("right", -45.0, 1.0, 4.0))   # (name, yaw, dipole weight, power)
 TASKS.update({
     "explore_sonar":      dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="sonar"),           # fixed omni click, sonar image
     "explore_sonar_beam": dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="sonar", beams=BEAMS, click_cost=0.01),
+    # range-only sensor (no direction in the echo): direction comes only from where the click is aimed
+    "explore_range_omni":  dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range"),
+    "explore_range_ahead": dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range", beams=(FWD("ahead", 0.0),), beam_cycle=True),
+    "explore_range_scan":  dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range", beams=BEAMS_FWD, beam_cycle=True),
+    "explore_range_beam":  dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range", beams=(("none", 0.0, 0.0, 1.0),) + BEAMS_FWD, click_cost=0.01),
     "sonar_beam_pointgoal": dict(goal_sound=False, self_click=True, pointgoal=True, sliding=False, echo_obs="sonar", beams=BEAMS, click_cost=0.01),
 })
 ENV_KW = dict(BASE_KW, **TASKS["audiogoal"])
-OBS_SHAPES = {"spectrogram": (2, 65, 26), "echo": (2, 65, 64), "sonar": (2, 64, 32), "pointgoal": (2,), "contact": (1,)}   # defaults; overwritten from the first observation
-VECTOR_KEYS = ("pointgoal", "contact")
+OBS_SHAPES = {"spectrogram": (2, 65, 26), "echo": (2, 65, 64), "sonar": (2, 64, 32), "range": (64,), "pointgoal": (2,), "contact": (1,)}   # defaults; overwritten from the first observation
+VECTOR_KEYS = ("pointgoal", "contact", "range")
 
 class AudioCNN(nn.Module):
     """SoundSpaces AudioCNN: 3 conv layers on the (2, 65, 26) spectrogram -> 512 features"""
@@ -68,6 +77,7 @@ class Policy(nn.Module):
         for k in self.keys:
             if k == "pointgoal": self.enc[k] = nn.Sequential(nn.Linear(3, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU()); n_in += 32
             elif k == "contact": self.enc[k] = nn.Sequential(nn.Linear(1, 16), nn.ReLU()); n_in += 16
+            elif k == "range": self.enc[k] = nn.Sequential(nn.Linear(shapes[k][0], 256), nn.ReLU(), nn.Linear(256, 256), nn.ReLU()); n_in += 256
             else: self.enc[k] = AudioCNN(shapes[k]); n_in += 512
         self.act_emb = nn.Embedding(n_actions + 1, 32); self.gru = nn.GRUCell(n_in, hidden)
         self.actor = nn.Linear(hidden, n_actions); self.critic = nn.Linear(hidden, 1); self.hidden = hidden
@@ -114,7 +124,7 @@ def load_policy(ck, device):
 def obs_keys(env_kw):
     keys = []
     if env_kw["goal_sound"]: keys.append("spectrogram")
-    if env_kw["self_click"]: keys.append("sonar" if env_kw.get("echo_obs") == "sonar" else "echo")
+    if env_kw["self_click"]: keys.append({"sonar": "sonar", "range": "range"}.get(env_kw.get("echo_obs"), "echo"))
     if env_kw["pointgoal"]: keys.append("pointgoal")
     if env_kw.get("contact"): keys.append("contact")
     return keys
@@ -152,7 +162,7 @@ def main():
     if args.click_cost is not None: env_kw["click_cost"] = args.click_cost
     if args.echo_dropout > 0: env_kw["echo_dropout"] = args.echo_dropout
     scene_list = [SCENES[n.strip()] for n in args.scenes.split(",")]
-    keys = obs_keys(env_kw); n_beams = len(env_kw["beams"]) if env_kw.get("beams") else 0
+    keys = obs_keys(env_kw); n_beams = len(env_kw["beams"]) if (env_kw.get("beams") and not env_kw.get("beam_cycle")) else 0
     print("task", args.task, "observation keys", keys, "beams", n_beams, flush=True)
     from habitat_audio.vec_env import SubprocVecEnv
     venv = SubprocVecEnv(scene_list, args.envs, env_kw, seed=args.seed * 100 + 1); print("scenes:", [os.path.basename(s) for s in venv.scenes], flush=True)

@@ -2,6 +2,7 @@
 import re, glob, os, numpy as np, sys
 R = os.path.expanduser("~/steamaudio/habitat_audio/runs/"); HELD = ["office_2", "frl_apartment_4", "hotel_0", "room_2"]
 AGENTS = [("q6_sonar", "sonar, fixed click"), ("q6_sonar_beam", "sonar + learned beam"), ("q6_echo_scan", "head-scan binaural"), ("q6_blind", "blind")]
+if len(sys.argv) > 1: AGENTS = [tuple(a.split(":", 1)) for a in sys.argv[1].split(",")]   # "prefix:label,prefix:label"
 pat = re.compile(r"^(PPO greedy|PPO sample|bump-turn)\s+coverage ([\d.]+) cells.*collisions/episode ([\d.]+)")
 def read(path):
     out = {}
@@ -20,6 +21,6 @@ for pre, name in AGENTS:
     if n == 0: rows.append(f"| {name} | 0 | | | | |"); continue
     f = lambda k, i: f"{np.mean([x[i] for x in per_seed[k]]):.1f} ± {np.std([x[i] for x in per_seed[k]]):.1f}"
     rows.append(f"| {name} | {n} | {f('PPO greedy',0)} | {f('PPO greedy',1)} | {f('PPO sample',0)} | {f('PPO sample',1)} |")
-bt = [read(p).get("bump-turn") for p in glob.glob(R + "q6_*_s1/eval_*.log")]; bt = [b for b in bt if b]
+bt = [read(p).get("bump-turn") for pre, _ in AGENTS for p in glob.glob(R + pre + "_s1/eval_*.log")]; bt = [b for b in bt if b]
 if bt: rows.append(f"| bump-and-turn heuristic | | {np.mean([b[0] for b in bt]):.1f} | {np.mean([b[1] for b in bt]):.1f} | | |")
 print("\n".join(rows)); print("\n(mean over the 4 held-out buildings per seed; ± = standard deviation across seeds)")

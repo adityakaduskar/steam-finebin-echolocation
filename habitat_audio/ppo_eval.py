@@ -32,7 +32,7 @@ def main():
     env = SteamAudioNavEnv(scene, seed=args.seed, **kw)
     episodes = [env.sample_episode()[:2] for _ in range(args.episodes)]
     policy, keys = load_policy(ck, device); nb = policy.n_beams
-    echo_bank = None; ekey = "sonar" if "sonar" in keys else "echo"
+    echo_bank = None; ekey = next((k for k in ("sonar", "range", "echo") if k in keys), "echo")
     if args.ablate == "shuffled" and ekey in keys:   # bank of echoes from 300 random poses
         echo_bank = []
         for _ in range(300):

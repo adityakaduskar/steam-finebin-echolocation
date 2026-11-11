@@ -56,6 +56,12 @@ def compute_sonar(ir, ahead, up, sr=AUDIO_SR, bins=SONAR_BINS, seconds=ECHO_SECO
     np.add.at(img, (it, ia), amp * np.sqrt(1.0 - el * el)); np.add.at(img_el, (it, ia), amp * el)
     return np.stack([np.log1p(gain * img), np.sign(img_el) * np.log1p(gain * np.abs(img_el))], -1).astype(np.float32)
 
+def compute_range(ir, bins=SONAR_BINS[0], seconds=ECHO_SECONDS, gain=10.0):
+    """range-only echo profile: log1p(gain * summed |W|) per range bin (17 cm), no direction at all -> (bins,) float32.
+    With a narrow click beam this is what a single-transducer ultrasonic aid measures: distance along the beam."""
+    n = min(int(seconds * AUDIO_SR), ir.shape[1]); W = np.abs(ir[0, :n]); idx = (np.arange(n) * bins) // n
+    return np.log1p(gain * np.bincount(idx, weights=W, minlength=bins)[:bins]).astype(np.float32)
+
 def compute_spectrogram(audio_2ch):
     """SoundSpaces AudioGoalSensor.compute_spectrogram: |STFT| (n_fft 512, hop 160, win 400), 4x4 mean pooling, log1p -> (F, T, 2)"""
     def stft(x):
@@ -79,7 +85,7 @@ class SteamAudioNavEnv(gym.Env):
                  success_reward=10.0, lib_path=None, seed=0, threads=8,
                  goal_sound=True, self_click=False, pointgoal=False, sliding=True, click_gain=1.0, collision_penalty=0.0,
                  scan_angles=None, click_dipole=(0.0, 1.0), explore=False, contact=False, coverage_cell=0.5, coverage_reward=1.0,
-                 aux_directions=None, aux_max_range=10.0, echo_obs="spectrogram", beams=None, click_cost=0.0, sonar_bins=SONAR_BINS, echo_dropout=0.0):
+                 aux_directions=None, aux_max_range=10.0, echo_obs="spectrogram", beams=None, click_cost=0.0, sonar_bins=SONAR_BINS, echo_dropout=0.0, probe_grid=None, beam_cycle=False):
         """echo_obs: 'spectrogram' = binaural echo spectrogram(s) ('echo'); 'sonar' = range x azimuth image from the ambisonic click response
         ('sonar', see compute_sonar; no binaural render). beams: active sensing -- a list of (name, yaw_deg, dipole_weight, dipole_power);
         the action becomes (navigation, beam): the click of this step is emitted with that beam (yaw + = left, dipole 0 = omnidirectional)
@@ -103,6 +109,8 @@ class SteamAudioNavEnv(gym.Env):
         self.echo_obs = echo_obs; self.beams = None if beams is None else [tuple(b) for b in beams]; self.click_cost = float(click_cost); self.sonar_bins = tuple(sonar_bins)
         self.default_beam = 0 if not self.beams else next((i for i, b in enumerate(self.beams) if b[0] != "none"), 0)
         self.current_beam = self.default_beam; self.n_clicks = 0
+        self.beam_cycle = bool(beam_cycle)   # scripted scan: the beam cycles through self.beams step by step, whatever the action says
+        self.probe_grid = probe_grid   # (half, cell_m): info['occ'], info['vis'] = egocentric (2h+1)^2 navigable / already-visited grids (probe labels)
         self.echo_dropout = float(echo_dropout); self.drop_rng = np.random.RandomState(seed + 7919)   # training augmentation: blank echo observation with this probability
         self.rng = np.random.RandomState(seed); self.scene_glb = scene_glb
         self.step_size, self.turn_angle, self.success_distance, self.max_steps = step_size, turn_angle, success_distance, max_steps
@@ -150,7 +158,9 @@ class SteamAudioNavEnv(gym.Env):
         # ---------------- spaces
         obs = {}
         if goal_sound: obs["spectrogram"] = spaces.Box(low=0, high=np.inf, shape=compute_spectrogram(np.ones((2, SS_SR), np.float32)).shape, dtype=np.float32)
-        if self_click and echo_obs == "sonar":
+        if self_click and echo_obs == "range":
+            obs["range"] = spaces.Box(low=0, high=np.inf, shape=(self.sonar_bins[0],), dtype=np.float32)
+        elif self_click and echo_obs == "sonar":
             obs["sonar"] = spaces.Box(low=-np.inf, high=np.inf, shape=(self.sonar_bins[0], self.sonar_bins[1], 2), dtype=np.float32)
         elif self_click:
             e = compute_echo_spectrogram(np.ones((2, SS_SR), np.float32)).shape; n_scan = len(self.scan_angles) if self.scan_angles else 1
@@ -159,7 +169,8 @@ class SteamAudioNavEnv(gym.Env):
         if contact: obs["contact"] = spaces.Box(low=0, high=1, shape=(1,), dtype=np.float32)
         if rgb: obs["rgb"] = spaces.Box(0, 255, (image_size, image_size, 3), np.uint8)
         if depth: obs["depth"] = spaces.Box(0, np.inf, (image_size, image_size, 1), np.float32)
-        self.observation_space = spaces.Dict(obs); self.action_space = spaces.MultiDiscrete([4, len(self.beams)]) if self.beams else spaces.Discrete(4)
+        self.observation_space = spaces.Dict(obs)
+        self.action_space = spaces.MultiDiscrete([4, len(self.beams)]) if (self.beams and not self.beam_cycle) else spaces.Discrete(4)
         self.episode = None; self.follower = None
 
     # ------------------------------------------------------------------ geometry helpers
@@ -209,7 +220,7 @@ class SteamAudioNavEnv(gym.Env):
         if self.src is not None: self.src.set_inputs(self.source_position, air_absorption=self.air)
         beam = self.beam_params()                        # None = no click this step
         if self.click_src is not None:
-            if beam is None or self.echo_obs != "sonar": self.click_src.set_inputs(lis, air_absorption=self.air)
+            if beam is None or self.echo_obs not in ("sonar", "range"): self.click_src.set_inputs(lis, air_absorption=self.air)
             else:
                 yaw, w, pw = beam; self.click_src.set_inputs(lis, ahead=self.rotated(ahead, up, yaw), up=up, air_absorption=self.air, dipole_weight=w, dipole_power=pw)
         if self.src is None and self.click_src is not None and beam is None:
@@ -227,7 +238,7 @@ class SteamAudioNavEnv(gym.Env):
             out["goal"] = (ir, resample_poly(binaural, SS_SR, AUDIO_SR, axis=1).astype(np.float32), d)
         if self.click_src is not None:
             # echoes only: the click's own direct sound (t = 0, constant) is left out; t = 0 is the emission instant
-            if self.echo_obs == "sonar":
+            if self.echo_obs in ("sonar", "range"):
                 out["echo"] = (None, None) if beam is None else (self.asim.extract_ir(self.click_src, self.ir_duration, self.order) * self.click_gain, None)
             elif not self.scan_angles:
                 ir = self.asim.extract_ir(self.click_src, self.ir_duration, self.order) * self.click_gain
@@ -258,13 +269,15 @@ class SteamAudioNavEnv(gym.Env):
             lis = self.listener_position(); self.last_direct = {"occlusion": float("nan"), "direct_amplitude": float("nan"), "distance": float(np.linalg.norm(self.source_position - lis))}
         if "echo" in res:
             self.last_echo_ir, self.last_echo_rir = res["echo"]
-            if self.echo_obs == "sonar":
+            if self.echo_obs == "range":
+                obs["range"] = np.zeros(self.sonar_bins[0], np.float32) if self.last_echo_ir is None else compute_range(self.last_echo_ir, bins=self.sonar_bins[0])
+            elif self.echo_obs == "sonar":
                 _, ahead, up = self.agent_pose()
                 obs["sonar"] = np.zeros((*self.sonar_bins, 2), np.float32) if self.last_echo_ir is None else compute_sonar(self.last_echo_ir, ahead, up, bins=self.sonar_bins)
             elif self.scan_angles: obs["echo"] = np.concatenate([compute_echo_spectrogram(r) for r in self.last_echo_rir], axis=-1)
             else: obs["echo"] = compute_echo_spectrogram(self.last_echo_rir)
         if self.echo_dropout > 0 and self.drop_rng.rand() < self.echo_dropout:
-            for k in ("echo", "sonar"):
+            for k in ("echo", "sonar", "range"):
                 if k in obs: obs[k] = np.zeros_like(obs[k])
         if self.pointgoal:
             az, el = self.source_bearing_deg(); obs["pointgoal"] = np.array([self.last_direct["distance"], math.radians(az)], np.float32)
@@ -278,7 +291,9 @@ class SteamAudioNavEnv(gym.Env):
     # ------------------------------------------------------------------ gym API
     def step(self, action):
         assert not self.done, "call reset()"
-        action, self.current_beam = self.parse_action(action); beam = self.beam_params(); clicked = beam is not None and bool(self.beams)
+        action, self.current_beam = self.parse_action(action)
+        if self.beam_cycle: self.current_beam = self.n_steps % len(self.beams)   # beam of the click whose echoes the next observation shows
+        beam = self.beam_params(); clicked = beam is not None and bool(self.beams)
         self.n_clicks += int(clicked); cost = self.click_cost if clicked else 0.0
         p0, _, _ = self.agent_pose(); self.n_steps += 1
         collided = False
@@ -295,6 +310,7 @@ class SteamAudioNavEnv(gym.Env):
             info = {"aux_dist": self.aux_distances() if self.ray_mesh is not None else None, "step": self.n_steps, "collisions": self.collisions, "collided": collided, "coverage_cells": len(self.visited), "beam": self.current_beam, "clicks": self.n_clicks,
                     "coverage_m2": len(self.visited) * self.coverage_cell ** 2, "path_length": self.path_length, "success": False, "spl": 0.0,
                     "geodesic_distance": g, "distance_to_goal": euclid, "occlusion": self.last_direct["occlusion"], "direct_amplitude": self.last_direct["direct_amplitude"]}
+            if self.probe_grid: info["occ"], info["vis"] = self.ego_grids()
             return obs, float(reward), self.done, info
         self.visited.add(self._cell(p1))
         g = self.geodesic(p1, self.goal); euclid = float(np.linalg.norm(p1 - self.goal))
@@ -309,10 +325,23 @@ class SteamAudioNavEnv(gym.Env):
                 "coverage_cells": len(self.visited), "path_length": self.path_length, "beam": self.current_beam, "clicks": self.n_clicks}
         return obs, float(reward), self.done, info
 
+    # ------------------------------------------------------------------ probe labels
+    def ego_grids(self):
+        """egocentric grids around the agent, rows = forward offset (-h..h cells, row 0 = behind), cols = rightward offset (-h..h):
+        occ = navigable floor at that point (Habitat navmesh), vis = that point's coverage cell was already visited this episode"""
+        half, cell = self.probe_grid; p, ahead, up = self.agent_pose(); right = np.cross(ahead, up)
+        a = np.array([ahead[0], 0.0, ahead[2]]); a /= max(np.linalg.norm(a), 1e-9); r = np.array([right[0], 0.0, right[2]]); r /= max(np.linalg.norm(r), 1e-9)
+        n = 2 * half + 1; occ = np.zeros((n, n), np.uint8); vis = np.zeros((n, n), np.uint8)
+        for i in range(n):
+            for j in range(n):
+                q = p + (i - half) * cell * a + (j - half) * cell * r
+                occ[i, j] = self.pf.is_navigable(q.astype(np.float32), 0.5); vis[i, j] = self._cell(q) in self.visited
+        return occ, vis
+
     # ------------------------------------------------------------------ active sensing helpers
     def parse_action(self, action):
         """int -> (nav, default beam); (nav, beam) -> as given"""
-        if self.beams and np.ndim(action) > 0: return int(action[0]), int(action[1])
+        if self.beams and not self.beam_cycle and np.ndim(action) > 0: return int(action[0]), int(action[1])
         return int(action if np.ndim(action) == 0 else action[0]), self.default_beam
 
     def beam_params(self):

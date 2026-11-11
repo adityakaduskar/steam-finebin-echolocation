@@ -1,0 +1,8 @@
+{
+ "numChannels": 4, "numSamples": 48640, "irSize": 48000, "sr": 48000, "frameSize": 512,
+ "wallAxis": "x", "wallPos": 3, "wallSize": 200, "flip": 0, "noWall": 0,
+ "src": [0,0,-2], "lis": [0,0,0],
+ "absorption": [0,0,0], "transmission": [0,0,0], "scattering": 0,
+ "numRays": 262144, "numBounces": 1, "order": 1, "duration": 1, "noAir": 0,
+ "direct": {"distanceAttenuation": 0.5, "airAbsorption": [0.9996,0.996606,0.964254], "directivity": 1, "occlusion": 1, "transmission": [1,1,1]}
+}

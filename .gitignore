@@ -1,0 +1,20 @@
+# --- third-party / regenerable (see scripts/fetch_sdk.sh, scripts/build_core.sh) ---
+downloads/
+core_src/
+unreal_plugin/
+sdk/
+# --- large or generated artefacts ---
+*.pt
+*.f32
+*.npz
+*.log
+*.out
+*.flag
+habitat_audio/cache/
+__pycache__/
+*.pyc
+*.bak_q4
+experiment/wall_experiment
+pysteamaudio/check_layout
+# --- scratch ---
+habitat_audio/runs/_smoke*/

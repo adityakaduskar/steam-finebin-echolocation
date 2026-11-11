@@ -1,0 +1,12 @@
+[
+ {
+  "check": "diffuse walls (s=1): measured T60 within 15 % of Eyring",
+  "pass": true,
+  "detail": "ratios [np.float64(0.895), np.float64(1.044), np.float64(1.115)]"
+ },
+ {
+  "check": "Steam Audio parametric RT60 estimate within 25 % of Eyring for diffuse walls",
+  "pass": true,
+  "detail": "relative deviations [np.float64(0.092), np.float64(0.036), np.float64(0.108)]"
+ }
+]

@@ -1,0 +1,37 @@
+[
+ {
+  "check": "first-order echoes start at the image-source sample (energy rise > 3x at the predicted onset)",
+  "pass": true,
+  "detail": "6/6 echoes with an unambiguous onset"
+ },
+ {
+  "check": "energy in each first-order echo window matches the cos(theta) image-source model within 15 %",
+  "pass": true,
+  "detail": "ratios [0.999, 1.089, 0.915, 1.086, 1.15, 0.949]"
+ },
+ {
+  "check": "direction vector of each first-order echo window matches the model (|err| < 0.2; windows contain several overlapping images)",
+  "pass": true,
+  "detail": "max |err| 0.154"
+ },
+ {
+  "check": "energy decay curve matches the cos(theta) image-source model within 1.5 dB over 0-40 ms",
+  "pass": true,
+  "detail": "max deviation 1.05 dB (mirror model: 1.32 dB)"
+ },
+ {
+  "check": "total early energy (0-45 ms, orders 1-3) matches the cos(theta) image-source model within 10 %",
+  "pass": true,
+  "detail": "ratio 0.938; vs mirror model 0.709"
+ },
+ {
+  "check": "diffuse walls (s=1): measured T60 within 15 % of Eyring",
+  "pass": true,
+  "detail": "ratios [0.908, 1.037, 1.106]"
+ },
+ {
+  "check": "Steam Audio parametric RT60 estimate within 25 % of Eyring for diffuse walls",
+  "pass": true,
+  "detail": "relative deviations [0.088, 0.038, 0.112]"
+ }
+]

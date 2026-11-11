@@ -1,0 +1,132 @@
+[
+ {
+  "check": "reflection onset sample == floor((r_refl - 1 cm - r_direct)/c * sr) within 1 sample",
+  "pass": true,
+  "detail": "max |error| = 1 samples (0.021 ms)"
+ },
+ {
+  "check": "speed of sound from arrival-time fit = 340 m/s",
+  "pass": true,
+  "detail": "fit over 13 distances: c = 340.01 m/s, intercept = -6.2 us"
+ },
+ {
+  "check": "IR time zero is the direct-path arrival (reflection delay = (r_refl - r_direct)/c)",
+  "pass": true,
+  "detail": "all 5 source distances match the direct-relative prediction within 2 samples (42 us); the emission-time hypothesis is off by hundreds to thousands of samples"
+ },
+ {
+  "check": "speed of sound = 340 m/s (not 343) at 34-102 m paths (1M rays)",
+  "pass": true,
+  "detail": "max |error| vs 340 m/s = 0.76 samples; 343 m/s would be off by 42-127 samples"
+ },
+ {
+  "check": "E(alpha)/E(0) == 1 - alpha (energy absorption coefficient)",
+  "pass": true,
+  "detail": "max deviation 0.0000"
+ },
+ {
+  "check": "absorption is applied per frequency band and matches the 2nd-order band-filter model",
+  "pass": true,
+  "detail": "max |measured - predicted| spectral ratio = 0.024"
+ },
+ {
+  "check": "Phong-lobe tail length (centroid - arrival) matches 2w/(n+1) within 15 %",
+  "pass": true,
+  "detail": "ratio range 0.87..0.98"
+ },
+ {
+  "check": "E proportional to 1/r_refl^2 (same-bin sweep, r = 6..103 m)",
+  "pass": true,
+  "detail": "log-log slope = -1.9979; E*r^2 spread = 0.26 %"
+ },
+ {
+  "check": "E proportional to 1/r_refl^2 (co-located sweep, r = 3..80 m)",
+  "pass": true,
+  "detail": "slope = -2.003; E*r^2 spread = 0.3 %"
+ },
+ {
+  "check": "absolute IR level: mirror reflection energy = 1/r_refl^2 (same scale as the direct effect) x filter gain",
+  "pass": true,
+  "detail": "measured E_W / [(1+2/n)/(4 pi r^2)] = 12.218; predicted 4 pi x zero-phase filter-bank gain 1.000 = 12.566"
+ },
+ {
+  "check": "air absorption in reflections = exp(-k d) per band at the sample's distance",
+  "pass": true,
+  "detail": "max |measured - predicted| spectral ratio = 0.018"
+ },
+ {
+  "check": "energy follows image-source distance (a+b), not source-wall distance b",
+  "pass": true,
+  "detail": "spread of E*(a+b)^2 = 0.6 %, spread of E*b^2 = 48.6 %"
+ },
+ {
+  "check": "reflection arrives from the image-source direction (ambisonic Y/Z/X channels)",
+  "pass": true,
+  "detail": "max |error| = 0.031 (N3D gain sqrt(3)=1.732)"
+ },
+ {
+  "check": "infinite diffuse wall: raw IR energy ratio E(s)/E(0) = 1 + 0.961 s (no reconstruction artefacts)",
+  "pass": true,
+  "detail": "raw ratios 1.509, 2.019 vs 1.480, 1.961"
+ },
+ {
+  "check": "scattering blends specular (Phong) and Lambertian diffuse reflection linearly: E(s)/E(0) = 1 + s (R - 1)",
+  "pass": true,
+  "detail": "max deviation 0.0155"
+ },
+ {
+  "check": "2x2 m panel: specular point on panel -> same energy as infinite wall",
+  "pass": true,
+  "detail": "E_panel/E_infinite = 0.998"
+ },
+ {
+  "check": "2x2 m panel: specular point 5 m off the panel -> no specular reflection",
+  "pass": true,
+  "detail": "E_off/E_on = 1.96e-27"
+ },
+ {
+  "check": "same off-axis panel with scattering=1 -> diffuse reflection present",
+  "pass": true,
+  "detail": "E_off_diffuse/E_on = 1.170e-02"
+ },
+ {
+  "check": "direct occlusion: wall between source and listener -> occlusion 0, transmission = material",
+  "pass": true,
+  "detail": "occlusion=0, transmission=[0.5, 0.3, 0.1]"
+ },
+ {
+  "check": "direct occlusion: clear line of sight -> occlusion 1, transmission 1",
+  "pass": true,
+  "detail": "occlusion=1"
+ },
+ {
+  "check": "direct distance attenuation = 1/max(r, 1 m)",
+  "pass": true,
+  "detail": "r=6: 0.1667, r=100: 0.0100, r=0.5: 1.000"
+ },
+ {
+  "check": "direct air absorption = exp(-k r), k = (0.0002, 0.0017, 0.0182) /m",
+  "pass": true,
+  "detail": "r=100 m: measured [0.9802 0.8437 0.162 ], expected [0.9802 0.8437 0.162 ]"
+ },
+ {
+  "check": "source behind the wall -> no reflection energy",
+  "pass": true,
+  "detail": "E/E_baseline = 1.96e-27"
+ },
+ {
+  "check": "wall triangles are two-sided (flipped winding gives same reflection)",
+  "pass": true,
+  "detail": "E_flipped/E = 1.000"
+ },
+ {
+  "check": "empty scene -> IR is zero",
+  "pass": true,
+  "detail": "E = 5.37e-29"
+ },
+ {
+  "check": "Monte Carlo estimate converged at 65536 rays",
+  "pass": true,
+  "detail": "|E(65536)/E(262144) - 1| = 0.0001; at 1024 rays: 0.007"
+ }
+]

@@ -1,0 +1,387 @@
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+index 5f9bb6a..c4b9dae 100644
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -163,7 +163,8 @@ if (IPL_OS_LINUX)
+         add_compile_options(-m32 -mfpmath=sse -march=native)
+     endif()
+     if (STEAMAUDIO_ENABLE_AVX)
+-        add_compile_options(-fabi-version=6)
++        # patched: -fabi-version=6 breaks std::unique_ptr with GCC >= 10 libstdc++
++        # add_compile_options(-fabi-version=6)
+     endif()
+ endif()
+ 
+diff --git a/core/src/core/api_reconstructor.cpp b/core/src/core/api_reconstructor.cpp
+index b1c98d8..08adcbc 100644
+--- a/core/src/core/api_reconstructor.cpp
++++ b/core/src/core/api_reconstructor.cpp
+@@ -92,7 +92,7 @@ void CReconstructor::reconstruct(IPLint32 numInputs, const IPLReconstructorInput
+     const auto* _distanceAttenuationCorrectionCurves = mTempDistanceAttenuation.data();
+     const auto* _airAbsorptionModels = mTempAirAbsorption.data();
+     const auto* _impulseResponses = mTempImpulseResponses.data();
+-    auto _reconstructionType = ReconstructionType::Linear;
++    auto _reconstructionType = ipl::IReconstructor::defaultType();
+     auto _duration = sharedInputs->duration;
+     auto _order = sharedInputs->order;
+ 
+diff --git a/core/src/core/api_simulator.cpp b/core/src/core/api_simulator.cpp
+index 493446f..3bd8ba0 100644
+--- a/core/src/core/api_simulator.cpp
++++ b/core/src/core/api_simulator.cpp
+@@ -143,7 +143,7 @@ void CSimulator::setSharedInputs(IPLSimulationFlags flags,
+         sharedReflectionInputs.duration = sharedData->duration;
+         sharedReflectionInputs.order = sharedData->order;
+         sharedReflectionInputs.irradianceMinDistance = sharedData->irradianceMinDistance;
+-        sharedReflectionInputs.reconstructionType = ReconstructionType::Linear;
++        sharedReflectionInputs.reconstructionType = ipl::IReconstructor::defaultType();
+ 
+         _simulator->setSharedReflectionInputs(sharedReflectionInputs);
+     }
+diff --git a/core/src/core/array_math.cpp b/core/src/core/array_math.cpp
+index 58a2352..710bece 100644
+--- a/core/src/core/array_math.cpp
++++ b/core/src/core/array_math.cpp
+@@ -257,7 +257,7 @@ void ArrayMath::multiplyAccumulate(int size,
+ 
+             auto y = float4::add(float4::mul(b1, x2), float4::mul(b0, float4::mul(b3, b4)));
+ 
+-            y = float4::add(y, float4::load(&outData[i]));
++            y = float4::add(y, float4::loadu(&outData[i]));   // patched: was an aligned load in the unaligned branch
+ 
+             float4::storeu(&outData[i], y);
+         }
+diff --git a/core/src/core/embree_reflection_simulator.cpp b/core/src/core/embree_reflection_simulator.cpp
+index 1e104fd..d76abd4 100644
+--- a/core/src/core/embree_reflection_simulator.cpp
++++ b/core/src/core/embree_reflection_simulator.cpp
+@@ -17,6 +17,7 @@
+ #if defined(IPL_USES_EMBREE) && (defined(IPL_CPU_X86) || defined(IPL_CPU_X64))
+ 
+ #include "embree_reflection_simulator.h"
++#include "energy_field.h"
+ 
+ #include "propagation_medium.h"
+ #include "sh.h"
+@@ -316,6 +317,7 @@ ispc::EmbreeReflectionSimulator EmbreeReflectionSimulator::ispcEmbreeReflectionS
+ {
+     ispc::EmbreeReflectionSimulator out;
+     out.speedOfSound = PropagationMedium::kSpeedOfSound;
++    out.binDuration = EnergyField::kBinDuration;
+     out.maxNumRays = in.mMaxNumRays;
+     out.numDiffuseSamples = in.mNumDiffuseSamples;
+     out.maxDuration = in.mMaxDuration;
+diff --git a/core/src/core/embree_reflection_simulator.ispc b/core/src/core/embree_reflection_simulator.ispc
+index f06c105..1ad64c1 100644
+--- a/core/src/core/embree_reflection_simulator.ispc
++++ b/core/src/core/embree_reflection_simulator.ispc
+@@ -371,6 +371,7 @@ struct EnergyField
+ struct EmbreeReflectionSimulator
+ {
+     float speedOfSound;
++    float binDuration;      // patched: energy-histogram bin duration (was the IPL_BIN_DURATION constant)
+     int maxNumRays;
+     int numDiffuseSamples;
+     float maxDuration;
+@@ -665,7 +666,7 @@ export void simulateEnergyField(const uniform EmbreeScene* uniform scene,
+                 uniform EnergyField& energyField = energyFields[energyFieldIndex];
+ 
+                 uniform int numBins = energyField.numBins;
+-                int bin = (int) floor(delay / IPL_BIN_DURATION);
++                int bin = (int) floor(delay / simulator->binDuration);
+                 if (bin < 0 || numBins <= bin)
+                    continue;
+ 
+diff --git a/core/src/core/energy_field.cpp b/core/src/core/energy_field.cpp
+index 838904d..e7726bd 100644
+--- a/core/src/core/energy_field.cpp
++++ b/core/src/core/energy_field.cpp
+@@ -19,6 +19,7 @@
+ #include "array_math.h"
+ #include "bands.h"
+ #include "sh.h"
++#include <cstdlib>
+ 
+ namespace ipl {
+ 
+@@ -26,7 +27,21 @@ namespace ipl {
+ // EnergyField
+ // --------------------------------------------------------------------------------------------------------------------
+ 
+-const float EnergyField::kBinDuration = 1e-2f;
++// Patched: the energy-histogram bin duration can be overridden with the environment variable
++// STEAMAUDIO_BIN_DURATION (seconds). Setting it to 1/samplingRate gives sample-resolution histograms.
++static float readBinDurationFromEnvironment()
++{
++    const char* value = std::getenv("STEAMAUDIO_BIN_DURATION");
++    if (value)
++    {
++        auto parsed = static_cast<float>(std::strtod(value, nullptr));
++        if (parsed > 0.0f && parsed <= 1.0f)
++            return parsed;
++    }
++    return 1e-2f;
++}
++
++const float EnergyField::kBinDuration = readBinDurationFromEnvironment();
+ 
+ EnergyField::EnergyField(float duration,
+                          int order)
+diff --git a/core/src/core/reconstructor.cpp b/core/src/core/reconstructor.cpp
+index ed7c209..084951b 100644
+--- a/core/src/core/reconstructor.cpp
++++ b/core/src/core/reconstructor.cpp
+@@ -19,6 +19,10 @@
+ #include <cstring>
+ #include <functional>
+ #include <random>
++#include <algorithm>
++#include <cstdlib>
++#include <cstring>
++#include <cstdint>
+ 
+ #include "array_math.h"
+ #include "log.h"
+@@ -36,6 +40,23 @@ namespace ipl {
+ const float IReconstructor::kEnergyThreshold = 1e-7f;
+ const float IReconstructor::kMinVariance = 1e-5f;
+ 
++ReconstructionType IReconstructor::defaultType()
++{
++    static const ReconstructionType type = []()
++    {
++        const char* value = std::getenv("STEAMAUDIO_RECONSTRUCTION");
++        if (value)
++        {
++            if (strcmp(value, "sparse") == 0 || strcmp(value, "Sparse") == 0)
++                return ReconstructionType::Sparse;
++            if (strcmp(value, "gaussian") == 0 || strcmp(value, "Gaussian") == 0)
++                return ReconstructionType::Gaussian;
++        }
++        return ReconstructionType::Linear;
++    }();
++    return type;
++}
++
+ 
+ // --------------------------------------------------------------------------------------------------------------------
+ // Reconstructor
+@@ -50,6 +71,8 @@ Reconstructor::Reconstructor(float maxDuration,
+     , mWhiteNoise(Bands::kNumBands, static_cast<int>(ceilf(maxDuration * samplingRate)))
+     , mBandIRs(Bands::kNumBands, static_cast<int>(ceilf(maxDuration * samplingRate)))
+     , mFilters(Bands::kNumBands)
++    , mSparseSigns(static_cast<int>(ceilf(maxDuration / EnergyField::kBinDuration)) + 1)
++    , mScratch(static_cast<int>(ceilf(maxDuration * samplingRate)))
+ {
+     for (auto i = 0; i < Bands::kNumBands; ++i)
+     {
+@@ -91,12 +114,54 @@ void Reconstructor::reconstruct(int numIRs,
+         auto numSamples = static_cast<int>(ceilf(duration * mSamplingRate));
+ 
+         numChannels = std::min({ energyField.numChannels(), impulseResponse.numChannels(), numChannels });
+-        auto numSamplesPerBin = static_cast<int>(ceilf(EnergyField::kBinDuration * mSamplingRate));
++        auto numSamplesPerBin = std::max(1, static_cast<int>(roundf(EnergyField::kBinDuration * mSamplingRate)));
+         numSamples = std::min({ impulseResponse.numSamples(), numSamples });
+         auto numBins = std::min({ energyField.numBins(), static_cast<int>(ceilf(static_cast<float>(numSamples) / static_cast<float>(numSamplesPerBin))) });
+ 
+         impulseResponses[i]->reset();
+ 
++        // Patched (Sparse): decide a polarity per bin, shared by all channels and bands so the Ambisonic
++        // channels stay coherent. A bin keeps positive polarity when its 1 ms neighbourhood is "peaked", i.e. the
++        // strongest 9-sample-wide cluster in that neighbourhood holds more than 30% of the neighbourhood's energy
++        // (an echo, including the short glossy tail of the Phong lobe). Otherwise the energy is spread out (late
++        // reverberation) and a deterministic pseudo-random sign is used so the tail does not pile up at DC.
++        // Patched: the stock energy threshold (1e-7 per 10 ms bin) scales with the bin duration so that fine bins
++        // do not drop the low-energy tails of distant or diffuse arrivals.
++        const auto sparseThreshold = kEnergyThreshold * (EnergyField::kBinDuration / 1e-2f);
++
++        if (type == ReconstructionType::Sparse)
++        {
++            auto window = std::max(1, static_cast<int>(roundf(1e-3f / EnergyField::kBinDuration)));   // +-1 ms
++            auto core = std::max(1, static_cast<int>(roundf(1e-4f / EnergyField::kBinDuration)));     // +-0.1 ms
++            Array<float, 1> total(numBins);
++            for (auto iBin = 0; iBin < numBins; ++iBin)
++            {
++                total[iBin] = 0.0f;
++                for (auto iBand = 0; iBand < Bands::kNumBands; ++iBand)
++                    total[iBin] += std::max(0.0f, energyField[0][iBand][iBin]);
++            }
++            Array<float, 1> prefix(numBins + 1);
++            prefix[0] = 0.0f;
++            for (auto iBin = 0; iBin < numBins; ++iBin)
++                prefix[iBin + 1] = prefix[iBin] + total[iBin];
++            auto rangeSum = [&](int lo, int hi) { lo = std::max(lo, 0); hi = std::min(hi, numBins - 1); return (hi < lo) ? 0.0f : prefix[hi + 1] - prefix[lo]; };
++
++            for (auto iBin = 0; iBin < numBins; ++iBin)
++            {
++                auto neighbourhood = rangeSum(iBin - window, iBin + window);
++                auto peaked = true;
++                if (neighbourhood >= sparseThreshold)
++                {
++                    auto best = 0.0f;
++                    for (auto k = std::max(0, iBin - window); k <= std::min(numBins - 1, iBin + window); ++k)
++                        best = std::max(best, rangeSum(k - core, k + core));
++                    peaked = (best > 0.3f * neighbourhood);
++                }
++                auto hash = static_cast<uint32_t>(iBin) * 2654435761u;
++                mSparseSigns[iBin] = (!peaked && ((hash >> 16) & 1u)) ? -1.0f : 1.0f;
++            }
++        }
++
+         for (auto iChannel = 0; iChannel < numChannels; ++iChannel)
+         {
+             for (auto iBand = 0; iBand < Bands::kNumBands; ++iBand)
+@@ -160,6 +225,26 @@ void Reconstructor::reconstruct(int numIRs,
+                         assert(Math::isFinite(normalization));
+                     }
+ 
++                    else if (type == ReconstructionType::Sparse)
++                    {
++                        // Patched: one impulse at the bin centre. Amplitude is chosen so that the W-channel energy
++                        // of the impulse equals 4*pi times the bin's irradiance, i.e. a perfect mirror at path
++                        // length r gives energy 1/r^2 -- the same scale as the direct effect's 1/r attenuation.
++                        // For a single arrival direction d the channel amplitudes are Y_ch(d) * sqrt(4 pi E).
++                        auto iSample = iBin * numSamplesPerBin;
++                        memset(&mBandIRs[iBand][iSample], 0, numBinSamples * sizeof(float));
++
++                        if (fabsf(energyField[iChannel][iBand][iBin]) < sparseThreshold || fabsf(energyField[0][iBand][iBin]) < sparseThreshold)
++                            continue;
++
++                        const auto fourPi = 4.0f * Math::kPi;
++                        auto amplitude = energyField[iChannel][iBand][iBin] * powf(fourPi, 0.75f) / sqrtf(energyField[0][iBand][iBin]);
++                        assert(Math::isFinite(amplitude));
++
++                        mBandIRs[iBand][iSample + numBinSamples / 2] = amplitude * mSparseSigns[iBin];
++                        normalization = 1.0f;
++                    }
++
+                     // 0.5 is for sqrt
+                     normalization *= airAbsorptionModels[i].evaluate(0.5f * PropagationMedium::kSpeedOfSound * ((iBin + 0.5f) * numSamplesPerBin * (1.0f / mSamplingRate)), iBand);
+ 
+@@ -173,11 +258,44 @@ void Reconstructor::reconstruct(int numIRs,
+                 mFilters[iBand].reset();
+             }
+ 
+-            mFilters[0].apply(numSamples, mBandIRs[0], impulseResponse[iChannel]);
+-            for (auto iBand = 1; iBand < Bands::kNumBands; ++iBand)
++            if (type == ReconstructionType::Sparse && Bands::kNumBands == 3)
+             {
+-                mFilters[iBand].apply(numSamples, mBandIRs[iBand], mBandIRs[iBand]);
+-                ArrayMath::add(numSamples, impulseResponse[iChannel], mBandIRs[iBand], impulseResponse[iChannel]);
++                // Patched: zero-phase (forward-backward) filtering keeps every impulse centred on its true arrival
++                // sample, and the three bands are made exactly complementary: low = LP^2, high = HP^2,
++                // mid = 1 - LP^2 - HP^2. The bands therefore sum to the identity, so a frequency-independent
++                // reflection is reproduced as an exact impulse train with no filter-bank gain or ringing.
++                auto* out = impulseResponse[iChannel];
++                auto* tmp = mScratch.data();
++                memcpy(out, mBandIRs[1], numSamples * sizeof(float));
++                memcpy(tmp, mBandIRs[1], numSamples * sizeof(float));
++                applyZeroPhase(mFilters[0], numSamples, tmp);
++                for (auto k = 0; k < numSamples; ++k) out[k] -= tmp[k];
++                memcpy(tmp, mBandIRs[1], numSamples * sizeof(float));
++                applyZeroPhase(mFilters[2], numSamples, tmp);
++                for (auto k = 0; k < numSamples; ++k) out[k] -= tmp[k];
++                applyZeroPhase(mFilters[0], numSamples, mBandIRs[0]);
++                ArrayMath::add(numSamples, out, mBandIRs[0], out);
++                applyZeroPhase(mFilters[2], numSamples, mBandIRs[2]);
++                ArrayMath::add(numSamples, out, mBandIRs[2], out);
++            }
++            else if (type == ReconstructionType::Sparse)
++            {
++                applyZeroPhase(mFilters[0], numSamples, mBandIRs[0]);
++                memcpy(impulseResponse[iChannel], mBandIRs[0], numSamples * sizeof(float));
++                for (auto iBand = 1; iBand < Bands::kNumBands; ++iBand)
++                {
++                    applyZeroPhase(mFilters[iBand], numSamples, mBandIRs[iBand]);
++                    ArrayMath::add(numSamples, impulseResponse[iChannel], mBandIRs[iBand], impulseResponse[iChannel]);
++                }
++            }
++            else
++            {
++                mFilters[0].apply(numSamples, mBandIRs[0], impulseResponse[iChannel]);
++                for (auto iBand = 1; iBand < Bands::kNumBands; ++iBand)
++                {
++                    mFilters[iBand].apply(numSamples, mBandIRs[iBand], mBandIRs[iBand]);
++                    ArrayMath::add(numSamples, impulseResponse[iChannel], mBandIRs[iBand], impulseResponse[iChannel]);
++                }
+             }
+ 
+             if (distanceAttenuationCorrectionCurves[i])
+@@ -188,4 +306,15 @@ void Reconstructor::reconstruct(int numIRs,
+     }
+ }
+ 
++
++void Reconstructor::applyZeroPhase(IIRFilterer& filter, int numSamples, float* buffer)
++{
++    filter.reset();
++    filter.apply(numSamples, buffer, buffer);
++    std::reverse(buffer, buffer + numSamples);
++    filter.reset();
++    filter.apply(numSamples, buffer, buffer);
++    std::reverse(buffer, buffer + numSamples);
++}
++
+ }
+diff --git a/core/src/core/reconstructor.h b/core/src/core/reconstructor.h
+index ac99246..1c9f904 100644
+--- a/core/src/core/reconstructor.h
++++ b/core/src/core/reconstructor.h
+@@ -30,7 +30,8 @@ namespace ipl {
+ enum class ReconstructionType
+ {
+     Gaussian,
+-    Linear
++    Linear,
++    Sparse      // Patched: one deterministic impulse per bin (no noise); zero-phase band filtering.
+ };
+ 
+ // Represents the state necessary to reconstruct an Ambisonics impulse response from an Ambisonics energy field.
+@@ -49,6 +50,10 @@ public:
+                              float duration,
+                              int order) = 0;
+ 
++    // Patched: reconstruction type selected by the environment variable STEAMAUDIO_RECONSTRUCTION
++    // (linear | gaussian | sparse). Default: linear (stock behaviour).
++    static ReconstructionType defaultType();
++
+ protected:
+     static const float kEnergyThreshold;
+     static const float kMinVariance;
+@@ -83,6 +88,10 @@ private:
+     Array<float, 2> mWhiteNoise;
+     Array<float, 2> mBandIRs;
+     Array<IIRFilterer> mFilters;
++    Array<float, 1> mSparseSigns;   // Patched: per-bin polarity used by Sparse reconstruction.
++    Array<float, 1> mScratch;       // Patched: scratch buffer for the complementary band split.
++
++    void applyZeroPhase(IIRFilterer& filter, int numSamples, float* buffer);
+ };
+ 
+ }
+diff --git a/core/src/core/reflection_simulator.cpp b/core/src/core/reflection_simulator.cpp
+index 6d1b832..5386827 100644
+--- a/core/src/core/reflection_simulator.cpp
++++ b/core/src/core/reflection_simulator.cpp
+@@ -15,6 +15,8 @@
+ //
+ 
+ #include "reflection_simulator.h"
++#include <cstdlib>
++#include <cstdio>
+ 
+ #include "direct_simulator.h"
+ #include "propagation_medium.h"
+diff --git a/core/src/core/simulation_manager.cpp b/core/src/core/simulation_manager.cpp
+index baf9193..5e847ab 100644
+--- a/core/src/core/simulation_manager.cpp
++++ b/core/src/core/simulation_manager.cpp
+@@ -118,7 +118,7 @@ SimulationManager::SimulationManager(bool enableDirect,
+     mSharedData->reflection.duration = maxDuration;
+     mSharedData->reflection.order = maxOrder;
+     mSharedData->reflection.irradianceMinDistance = 1.0f;
+-    mSharedData->reflection.reconstructionType = ReconstructionType::Linear;
++    mSharedData->reflection.reconstructionType = IReconstructor::defaultType();
+     
+     mProbeBatchesForLookup.reserve(16);
+ }

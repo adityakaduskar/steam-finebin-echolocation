@@ -1,0 +1,4 @@
+PPO greedy success 0.20  SPL 0.18  mean length 143  collisions/episode 16.0
+PPO sample success 0.17  SPL 0.16  mean length 39  collisions/episode 2.7
+random     success 0.01  SPL 0.01  mean length 23  collisions/episode 5.7
+oracle     success 1.00  SPL 1.00  mean length 34  collisions/episode 0.0

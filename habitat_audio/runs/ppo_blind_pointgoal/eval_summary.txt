@@ -1,0 +1,8 @@
+[22:05:21:583076]:[Metadata] MetadataMediator.cpp(120)::createSceneDataset : Dataset default successfully created.
+[22:05:21:583111]:[Metadata] MetadataMediator.cpp(203)::setActiveSceneDatasetName : Previous active dataset  changed to default successfully.
+[22:05:21:583119]:[Metadata] MetadataMediator.cpp(175)::setCurrPhysicsAttributesHandle : Old physics manager attributes  changed to ./data/default.physics_config.json successfully.
+[22:05:22:706339]:[Sim] Simulator.cpp(205)::reconfigure : CreateSceneInstance success == true for active scene name : /home/adityakaduskar/sound-spaces/data/versioned_data/habitat_test_scenes_1.0/apartment_1.glb  with renderer.
+PPO greedy success 0.25  SPL 0.22  mean length 161  collisions/episode 9.7
+PPO sample success 0.28  SPL 0.25  mean length 100  collisions/episode 10.1
+random     success 0.01  SPL 0.01  mean length 24  collisions/episode 6.3
+oracle     success 1.00  SPL 1.00  mean length 34  collisions/episode 0.0

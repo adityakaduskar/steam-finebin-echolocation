@@ -511,3 +511,37 @@ MLP decoders, held-out buildings, mean ± s.d. over three seeds:
   slightly better than the memory state (sonar fixed click 0.83 vs 0.80), so the GRU keeps only part of what it hears. Blind agents
   hold a weak wall map built from bumps alone (0.61, current bump bit 0.50).
 * Linear decoders give the same ordering at lower values (visited among walkable: blind 0.76, sonar 0.68, head-scan 0.71).
+
+## Range-only echo sensor: does learned aiming help? (queue 7 part B, finished 2026-11-11; `runs/queue7_results.md`, `runs/queue7_summary.png`)
+
+The sonar image already shows every direction, which made the queue 5/6 beam choice nearly irrelevant (and those beams, dipole
+weight 1, power 4, were |cos θ|⁴ figure-eights that also fired backwards). Here the echo observation is a **range-only profile**
+(`echo_obs="range"`: 64 bins of 17 cm, summed over all arrival directions, like a single-transducer ultrasonic aid), so direction can come
+only from where the click is aimed. Beams are forward-only cardioid⁸ lobes ((1 + cos θ)/2)⁸ at 90°/45° left, ahead, 45°/90° right;
+`validate_range.py` confirms in a shoebox that each beam's strongest return is the wall it points at. Four configurations, 3 seeds,
+same training as queue 6 (14 Replica buildings, penalty 0.05, 5 % blank echoes, aux loss): the agent chooses the beam or no click
+each step (click cost 0.01); a scripted sweep cycling through the five beams; a fixed ahead beam; an omnidirectional click.
+
+Held-out buildings, greedy policy, mean ± s.d. over seeds:
+
+| agent | coverage (cells) | collisions / episode | clicks / step |
+|---|---|---|---|
+| sonar image, fixed click (queue 6) | **37.0 ± 1.5** | 17.5 ± 6.7 | 1 |
+| range + learned beam | 27.7 ± 1.4 | **15.4 ± 2.0** | 0.2–1.0 by seed (≈0.4, ≈0.95, ≈0.75) |
+| range + scripted scan | 30.4 ± 0.3 | 24.4 ± 3.3 | 1 |
+| range + fixed ahead beam | 32.0 ± 3.2 | 29.3 ± 11.5 | 1 |
+| range + omni click | 28.5 ± 8.1 | 29.3 ± 14.4 | 1 |
+| blind (queue 6) | 24.5 ± 3.9 | 20.6 ± 5.3 | 0 |
+| bump-and-turn | 27.8 | 31.9 | |
+
+* **Direction in the echo is worth about 5–9 cells.** Every range-only agent sits between blind (24.5) and the sonar image (37.0).
+* **Learned aiming did not raise coverage** (27.7, below the scripted sweep and the fixed beam), **but it gave the safest explorer of
+  all**: 15.4 ± 2.0 collisions, fewer than the sonar agent, with the smallest seed spread, while the fixed and omni configurations range
+  from 9 to 41 collisions between seeds. The learned agents trade ground covered for caution.
+* **The learned agents ration their clicks.** One seed clicks on only 20–46 % of steps; the others on 73–99 %. Preferred beams differ
+  by seed (left 45° and right 90°; ahead; left 45° and 90°), with almost no use of right 45°. Zeroing the range input cuts the learned
+  agents' coverage by roughly a third to a half, so the beam they choose is used, not ignored.
+* **Scripted sweep vs fixed ahead:** similar coverage, but the sweep is far more consistent across seeds (± 0.3 cells) with fewer collisions.
+* Overall: aiming a click is a genuine active-sensing behaviour when it is the only source of direction, and RL agents find it, but in
+  this task it buys safety and sensing economy rather than coverage; a sensor that resolves direction by itself (the sonar image) remains
+  clearly better.

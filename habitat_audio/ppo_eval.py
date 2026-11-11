@@ -25,6 +25,8 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--ckpt", default="habitat_audio/runs/ppo_apartment1/checkpoint.pt"); ap.add_argument("--episodes", type=int, default=100)
     ap.add_argument("--geodesic", type=float, nargs=2, default=(1.0, 8.0)); ap.add_argument("--seed", type=int, default=12345)
     ap.add_argument("--ablate", default=None, choices=[None, "shuffled", "zeros"], help="replace the echo observation at test time: shuffled = an echo recorded at a random other pose, zeros = none")
+    ap.add_argument("--reset-every", type=int, default=0, help="wipe the policy's recurrent memory every N steps (0 = never; 1 = no memory at all)")
+    ap.add_argument("--greedy-only", action="store_true", help="skip the sampled-policy run")
     ap.add_argument("--skip-baselines", action="store_true"); ap.add_argument("--scene", default="apartment_1", help="scene name (see SCENES) or path"); args = ap.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); ck = torch.load(args.ckpt, map_location=device)
     kw = dict(ck.get("env_kw", ENV_KW)); kw["geodesic_range"] = tuple(args.geodesic); kw["threads"] = 8; keys = ck.get("keys", ["spectrogram"])
@@ -42,12 +44,13 @@ def main():
         if args.ablate is None or ekey not in obs: return obs
         obs = dict(obs); obs[ekey] = echo_bank[rs.randint(len(echo_bank))] if args.ablate == "shuffled" else np.zeros_like(obs[ekey]); return obs
     def ppo_act(x, use_greedy):
-        if x == "init": return (torch.zeros(1, 512, device=device), torch.full((1,), 4, dtype=torch.long, device=device), torch.full((1,), nb, dtype=torch.long, device=device) if nb else None)
-        obs, (h, pa, pb), _ = x
+        if x == "init": return (torch.zeros(1, 512, device=device), torch.full((1,), 4, dtype=torch.long, device=device), torch.full((1,), nb, dtype=torch.long, device=device) if nb else None, 0)
+        obs, (h, pa, pb, n), _ = x
+        if args.reset_every and n > 0 and n % args.reset_every == 0: h = torch.zeros_like(h)   # memory wipe (previous action/beam inputs kept)
         with torch.no_grad(): dist, v, h = policy.step(to_tensor([ablate(obs)], device, keys), pa, h, torch.ones(1, device=device), pb)
         a = greedy(dist) if use_greedy else dist.sample()
-        if nb: return (int(a[0, 0]), int(a[0, 1])), (h, a[:, 0], a[:, 1])
-        return int(a.item()), (h, a, None)
+        if nb: return (int(a[0, 0]), int(a[0, 1])), (h, a[:, 0], a[:, 1], n + 1)
+        return int(a.item()), (h, a, None, n + 1)
     def rand_act(x):
         if x == "init": return 0
         obs, n, env = x; a = int(np.random.randint(4))
@@ -63,13 +66,14 @@ def main():
         if x == "init": return None
         try: return x[2].oracle_action(), None
         except Exception: return 0, None   # habitat_sim GreedyFollowerError: count the episode as a failure (stop)
-    tag = f" [echo {args.ablate}]" if args.ablate else ""
-    res = {"ppo_greedy": run(env, episodes, lambda x: ppo_act(x, True), "PPO greedy" + tag), "ppo_sample": run(env, episodes, lambda x: ppo_act(x, False), "PPO sample" + tag)}
+    tag = (f" [echo {args.ablate}]" if args.ablate else "") + (f" [memory reset every {args.reset_every}]" if args.reset_every else "")
+    res = {"ppo_greedy": run(env, episodes, lambda x: ppo_act(x, True), "PPO greedy" + tag)}
+    if not args.greedy_only: res["ppo_sample"] = run(env, episodes, lambda x: ppo_act(x, False), "PPO sample" + tag)
     if not args.skip_baselines:
         res["random"] = run(env, episodes, rand_act, "random")
         if env.explore: res["bump_turn"] = run(env, episodes, bump_act, "bump-turn")
         else: res["oracle"] = run(env, episodes, oracle_act, "oracle")
-    json.dump({k: v.tolist() for k, v in res.items()}, open(os.path.join(os.path.dirname(args.ckpt), f"eval_{args.episodes}{'_' + args.ablate if args.ablate else ''}{'' if args.scene == 'apartment_1' else '_' + os.path.basename(scene).split('.')[0]}.json"), "w"))
+    json.dump({k: v.tolist() for k, v in res.items()}, open(os.path.join(os.path.dirname(args.ckpt), f"eval_{args.episodes}{'_' + args.ablate if args.ablate else ''}{'_reset' + str(args.reset_every) if args.reset_every else ''}{'' if args.scene == 'apartment_1' else '_' + os.path.basename(scene).split('.')[0]}.json"), "w"))
     env.close()
 
 if __name__ == "__main__": main()

@@ -42,10 +42,11 @@ python3 paper/gen_tables.py                            # regenerate figs/tab_per
 
 ## Open items before submission (need the author)
 
-1. **References**: `refs.bib` was written from memory. Every entry (authors, venue, year, pages) must be checked against the source.
-2. **Anonymised code link**: TMLR is double-blind; the repository must be shared through an anonymising service or as supplementary material.
-3. **AI-use statement**: the paper discloses AI assistance; check it against TMLR's current policy and edit as you see fit.
-4. **Licence** for the repository's own code is still unchosen.
+1. **References**: checked on 2026-11-11 against arXiv, Crossref, OpenReview, PubMed and publisher pages (DBLP was unreachable). 23 of 29 were correct; 5 were fixed (two author-name encodings, the full Replica author list, one spelling, the Embree article number). `alain2017understanding` is cited as arXiv 2016; it may alternatively be cited as an ICLR 2017 workshop paper.
+2. **Anonymised code**: `scripts/make_anonymous_bundle.sh` builds `paper/supplementary_anonymous.zip` (18 MB; TMLR allows 100 MB of anonymised PDF/ZIP supplementary material). Rebuild it after the last commit before submitting.
+3. **AI-use disclosure**: TMLR's FAQ requires a first-page footnote stating LLM use (added) and says LLMs cannot be authors; see `AUTHOR_REVIEW.md` J22.
+4. **Licence**: Apache-2.0 added (`LICENSE`, `NOTICE`); change it if you prefer another.
 5. Not included yet: the click-cost sweep (queue 8 part B, still training when the draft was written).
-6. Known weaknesses a reviewer will raise are listed in the paper's Limitations section (3 seeds, small buildings, blind agents trained
-   without the auxiliary loss, figure-of-eight beams in Experiment 1).
+6. Controls for two confounds (blind + auxiliary loss; sonar + forward-only beams; 3 seeds each) are queued as queue 9 (`habitat_audio/queue9.sh`).
+7. **Author judgement**: 26 marked passages, see `AUTHOR_REVIEW.md` and `main_review.pdf`.
+8. TMLR facts (checked 2026-11-11): double-blind, rolling, no fee, no page limit, template mandatory, main body over 12 pages gets a longer review timeline (ours is longer), arXiv posting allowed with the `preprint` style option, author list frozen at submission.

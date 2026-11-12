@@ -23,7 +23,7 @@ Each entry says what the draft claims, why it is a judgement call, and what the 
 
 | # | Where | What the draft says | Why it needs you | Options |
 |---|---|---|---|---|
-| J7 | Sec. 3.5 | The cos θ deficit affects first echoes "little" because an agent's own click returns at normal incidence | Argument from geometry; never measured inside a building. | Keep as an argument ("we expect"); or measure (compare first-echo energy with the image-source value at ~50 poses; about an hour of work). |
+| ~~J7~~ | Sec. 3.5 | **Resolved 2026-11-11 by measurement** (`habitat_audio/nogpu_checks.py`): first-bounce energy of a co-located click is 0.990 of the mirror-correct value (min 0.976 over 200 poses). The sentence now states this; marker removed. | Note it evaluates the engine's lobe formula by ray casting, not the engine's output. | Accept, or ask for a direct engine comparison. |
 | J10 | Experiment 1, Result 2 | Head-scan is no better than blind because the spectrogram "leaves the policy to recover" range and bearing | One explanation among several: 3 clicks vs 1, different encoder input size (6×65×64 vs 2×64×32), 2M steps possibly too few, cardioid² vs omni click. None were isolated. | Present as a hypothesis; or add a control (binaural single click; or sonar image built from the three scan clicks). |
 | J11 | Experiment 1, Result 3 | Beam choice is noise because "the sonar image already resolves direction" | Plausible, untested; and that beam set fired backwards as well. The queue 9 control (forward beams) will speak to this. | Wait for queue 9, then rewrite this paragraph from its result. |
 | J12 | Experiment 1, ablations | Zeroed echoes make the sonar agent "slow down sharply … it does not move confidently" | "Confidently" is an intention attributed to a policy. The data are 11.1 cells and 8.7 collisions. | Replace with the numbers only, or keep. |
@@ -32,8 +32,8 @@ Each entry says what the draft claims, why it is a judgement call, and what the 
 | J14 | Experiment 3, Result 9 | Blind agents remember best because they "can avoid re-covering ground only by integrating [their] own movements" | Functional explanation of a decoding result. Experiment 4 supports it partly (J23). | Keep with a pointer to Experiment 4; or state only the AUROC ordering. |
 | J15 | Experiment 3, Result 10 | "The recurrent state retains somewhat less geometric information than a pooled copy of the latest echo" | The gap is 0.803 vs 0.832 for one agent and zero for the other two; decoders are small; the observation was pooled to 512 numbers. "Perceive rather than remember" may be too strong a title for Result 10. | Soften the heading to "memory adds no geometric information beyond the current echo"; or keep. |
 | J23 | Experiment 4, Result 11 | The 15 % drop for blind agents "supports the reading" that they rely on longer path memory | Causal claim from 3 seeds, 2 buildings, a 3-cell difference (all three seeds do drop). Echo agents' coverage rose slightly when wiped, which is itself unexplained. | Keep with those caveats stated; or add wipe intervals 5, 10, 50 to show a dose-response curve (evaluation only, about 2 h). |
-| J24 | Experiment 4, Result 12 | Short-term memory "is what keeps these agents from walking into the same obstacle repeatedly" | Mechanism not observed directly; collisions were counted, not whether they repeat at the same place. | Check the logs/videos for repeated collisions at one spot; or reword to "without memory collisions rise 3–6×". |
-| J25 | Experiment 4, "Repeatability" | Echo-agent re-evaluations differ by up to one cell because "the acoustic simulation is not bit-reproducible" | Inferred from the contrast with the blind agents (which reproduce exactly); the source of nondeterminism (thread scheduling in ray tracing) was not verified. | Verify by running one evaluation twice with 1 thread; or keep the inference labelled as such. |
+| J24 | Experiment 4, Result 12 | Short-term memory "is what keeps these agents from walking into the same obstacle repeatedly" | Mechanism not observed directly. A measurement is prepared (`ppo_eval --log-collisions`, `collision_repeats.py`) and queued behind the training runs. | Wait for that result, then keep, reword or delete. |
+| ~~J25~~ | Experiment 4, "Repeatability" | **Resolved 2026-11-11 by measurement**: the cause is not threading; Steam Audio redraws its rays every run. Identical clicks give sonar images correlating at 0.94–0.97. Text and Appendix G updated; marker removed. | New fact worth your attention: the agents' sonar observations are noisy at a fixed pose. | Decide whether this belongs in the main text of Sec. 4 as a property of the environment. |
 
 ## C. Design choices a reviewer will question
 
@@ -66,3 +66,22 @@ Each entry says what the draft claims, why it is a judgement call, and what the 
 4. Go through section B and, for each, choose "measure", "label as hypothesis" or "delete".
 5. Rewrite the Introduction, Discussion and Conclusion in your own words; they carry almost all of the judgement.
 6. J21, J22 last, once the content is final.
+
+## Update 2026-11-11: literature search for J2 / J5 (done by a research agent; I did not read these papers myself)
+
+The search found **prior work that the first draft missed**, so both novelty sentences were rewritten and five references added.
+You must read at least the first one before submission.
+
+1. **Zhu, Rahtu, Zhao, "Beyond Visual Field of View: Perceiving 3D Environment with Echoes and Vision", arXiv:2207.01136.** A PointGoal
+   agent in Habitat/SoundSpaces whose only inputs are GPS and binaural echoes of its own sweep. Reported SPL on Replica: echoes 0.547,
+   GPS-only 0.491. **This is the closest prior work and it reports the opposite of our preliminary P4** (echoes did not help our
+   point-goal agent). The draft now cites it and says the discrepancy was not investigated. Judgement needed: explain the difference
+   (their acoustics, wall sliding, training budget, no seeds reported) or run the three-seed point-goal experiment before claiming anything.
+2. Hu, Purushwalkam, Harwath, Grauman, "Learning to Map Efficiently by Active Echolocation", IROS 2023: agent with vision learns *when* to emit. Relevant to Experiment 2.
+3. Yu et al., "Echo-Enhanced Embodied Visual Navigation", Neural Computation 2023: learned emitter added to visual point-goal navigation, five runs.
+4. Mohan & Vanderelst (SSCI 2020) and Nguyen & Vanderelst (SSCI 2022): echo-only deep RL in 2-D bat simulations.
+5. Not added, consider: Velmurugan et al., "Saranga", Science Robotics 2026 (real ultrasonic drone, hand-designed controller).
+
+The first names of the authors in the five new BibTeX entries (zhu2022beyond, hu2023learning, yu2023echo, mohan2020training,
+nguyen2022toward) and their page numbers are **unverified**: the agent could not open two of the papers. Check them.
+The agent found no follow-up to Wijmans et al. 2023 that probes the memory of echo or audio agents.

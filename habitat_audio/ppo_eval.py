@@ -8,6 +8,7 @@ import numpy as np, torch
 from habitat_audio import SteamAudioNavEnv, STOP
 from habitat_audio.ppo_train import Policy, SCENE, SCENES, ENV_KW, to_tensor, load_policy, greedy
 
+COLL_LOG = None
 def run(env, episodes, act_fn, name):
     stats = []; beam_counts = np.zeros(len(env.beams)) if env.beams else None
     for i, (start, goal) in enumerate(episodes):
@@ -15,6 +16,10 @@ def run(env, episodes, act_fn, name):
         while not done:
             a, state = act_fn((obs, state, env)); obs, r, done, info = env.step(a)
             if beam_counts is not None: beam_counts[info["beam"]] += 1
+            if COLL_LOG is not None and name.startswith("PPO greedy"):
+                if info["step"] == 1: COLL_LOG.append([])
+                if info.get("collided"):
+                    p_, ah_, _ = env.agent_pose(); COLL_LOG[-1].append([int(info["step"]), round(float(p_[0]), 3), round(float(p_[2]), 3), round(float(np.degrees(np.arctan2(-ah_[0], -ah_[2]))) % 360, 1)])
         stats.append((info["success"], info["spl"], info["step"], env.episode["geodesic"], info.get("collisions", 0), info.get("coverage_cells", 0), info.get("path_length", 0), info.get("clicks", 0)))
     s = np.array(stats, float); clicks = f"  clicks/step {s[:,7].sum()/max(s[:,2].sum(),1):.2f}  beams " + " ".join(f"{b[0]} {c / max(beam_counts.sum(), 1):.2f}" for b, c in zip(env.beams, beam_counts)) if env.beams else ""
     if env.explore: print(f"{name:10s} coverage {s[:,5].mean():.1f} cells ({s[:,5].mean()*env.coverage_cell**2:.1f} m^2)  path {s[:,6].mean():.1f} m  collisions/episode {s[:,4].mean():.1f}  collisions/m {s[:,4].sum()/max(s[:,6].sum(),1e-9):.2f}{clicks}", flush=True)
@@ -26,6 +31,7 @@ def main():
     ap.add_argument("--geodesic", type=float, nargs=2, default=(1.0, 8.0)); ap.add_argument("--seed", type=int, default=12345)
     ap.add_argument("--ablate", default=None, choices=[None, "shuffled", "zeros"], help="replace the echo observation at test time: shuffled = an echo recorded at a random other pose, zeros = none")
     ap.add_argument("--reset-every", type=int, default=0, help="wipe the policy's recurrent memory every N steps (0 = never; 1 = no memory at all)")
+    ap.add_argument("--log-collisions", default=None, help="write a JSON list (one entry per greedy episode) of [step, x, z, heading_deg] for every collided step")
     ap.add_argument("--greedy-only", action="store_true", help="skip the sampled-policy run")
     ap.add_argument("--skip-baselines", action="store_true"); ap.add_argument("--scene", default="apartment_1", help="scene name (see SCENES) or path"); args = ap.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); ck = torch.load(args.ckpt, map_location=device)
@@ -66,8 +72,11 @@ def main():
         if x == "init": return None
         try: return x[2].oracle_action(), None
         except Exception: return 0, None   # habitat_sim GreedyFollowerError: count the episode as a failure (stop)
+    global COLL_LOG
+    if args.log_collisions: COLL_LOG = []
     tag = (f" [echo {args.ablate}]" if args.ablate else "") + (f" [memory reset every {args.reset_every}]" if args.reset_every else "")
     res = {"ppo_greedy": run(env, episodes, lambda x: ppo_act(x, True), "PPO greedy" + tag)}
+    if args.log_collisions: json.dump(COLL_LOG, open(args.log_collisions, "w"))
     if not args.greedy_only: res["ppo_sample"] = run(env, episodes, lambda x: ppo_act(x, False), "PPO sample" + tag)
     if not args.skip_baselines:
         res["random"] = run(env, episodes, rand_act, "random")

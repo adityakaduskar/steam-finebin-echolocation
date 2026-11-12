@@ -111,3 +111,45 @@
     PPO greedy [memory reset every 1] coverage 19.3 cells (4.8 m^2)  path 16.0 m  collisions/episode 79.0  collisions/m 4.94  clicks/step 0.94  beams none 0.06 left90 0.55 left45 0.02 ahead 0.02 right45 0.35 right90 0.00
 
 ## B. click-cost sweep
+
+## range + learned beam, click cost 0, seed 1  (1117/1117 steps 2001664 episodes 6664)
+### replica/office_2 (HELD OUT)
+    PPO greedy coverage 26.8 cells (6.7 m^2)  path 22.1 m  collisions/episode 38.2  collisions/m 1.73  clicks/step 0.74  beams none 0.26 left90 0.00 left45 0.17 ahead 0.51 right45 0.05 right90 0.00
+    PPO sample coverage 25.8 cells (6.5 m^2)  path 18.7 m  collisions/episode 50.2  collisions/m 2.68  clicks/step 0.79  beams none 0.21 left90 0.08 left45 0.21 ahead 0.29 right45 0.14 right90 0.06
+    bump-turn  coverage 25.1 cells (6.3 m^2)  path 19.5 m  collisions/episode 33.1  collisions/m 1.70  clicks/step 1.00  beams none 0.00 left90 1.00 left45 0.00 ahead 0.00 right45 0.00 right90 0.00
+### replica/frl_apartment_4 (HELD OUT)
+    PPO greedy coverage 38.4 cells (9.6 m^2)  path 31.8 m  collisions/episode 26.0  collisions/m 0.82  clicks/step 0.70  beams none 0.30 left90 0.00 left45 0.09 ahead 0.59 right45 0.01 right90 0.00
+    PPO sample coverage 40.6 cells (10.2 m^2)  path 27.9 m  collisions/episode 34.1  collisions/m 1.22  clicks/step 0.76  beams none 0.24 left90 0.07 left45 0.19 ahead 0.34 right45 0.10 right90 0.05
+    bump-turn  coverage 33.2 cells (8.3 m^2)  path 25.1 m  collisions/episode 29.8  collisions/m 1.19  clicks/step 1.00  beams none 0.00 left90 1.00 left45 0.00 ahead 0.00 right45 0.00 right90 0.00
+### replica/hotel_0 (HELD OUT)
+    PPO greedy coverage 27.0 cells (6.8 m^2)  path 21.5 m  collisions/episode 20.0  collisions/m 0.93  clicks/step 0.96  beams none 0.04 left90 0.00 left45 0.58 ahead 0.36 right45 0.01 right90 0.00
+    PPO sample coverage 24.4 cells (6.1 m^2)  path 18.8 m  collisions/episode 37.4  collisions/m 1.99  clicks/step 0.87  beams none 0.13 left90 0.07 left45 0.35 ahead 0.26 right45 0.13 right90 0.06
+    bump-turn  coverage 22.4 cells (5.6 m^2)  path 19.9 m  collisions/episode 33.1  collisions/m 1.67  clicks/step 1.00  beams none 0.00 left90 1.00 left45 0.00 ahead 0.00 right45 0.00 right90 0.00
+### replica/room_2 (HELD OUT)
+    PPO greedy coverage 40.0 cells (10.0 m^2)  path 27.2 m  collisions/episode 20.7  collisions/m 0.76  clicks/step 0.85  beams none 0.15 left90 0.00 left45 0.42 ahead 0.40 right45 0.02 right90 0.00
+    PPO sample coverage 38.8 cells (9.7 m^2)  path 25.4 m  collisions/episode 31.0  collisions/m 1.22  clicks/step 0.83  beams none 0.17 left90 0.09 left45 0.30 ahead 0.25 right45 0.14 right90 0.05
+    bump-turn  coverage 31.8 cells (7.9 m^2)  path 24.3 m  collisions/episode 30.5  collisions/m 1.26  clicks/step 1.00  beams none 0.00 left90 1.00 left45 0.00 ahead 0.00 right45 0.00 right90 0.00
+### office_2 + hotel_0, echoes zeros
+    PPO greedy [echo zeros] coverage 19.7 cells (4.9 m^2)  path 19.6 m  collisions/episode 16.5  collisions/m 0.85  clicks/step 1.00  beams none 0.00 left90 0.00 left45 0.00 ahead 0.99 right45 0.01 right90 0.00
+    PPO sample [echo zeros] coverage 22.4 cells (5.6 m^2)  path 19.0 m  collisions/episode 22.9  collisions/m 1.20  clicks/step 0.99  beams none 0.01 left90 0.02 left45 0.02 ahead 0.58 right45 0.29 right90 0.08
+    PPO greedy [echo zeros] coverage 21.3 cells (5.3 m^2)  path 20.2 m  collisions/episode 15.8  collisions/m 0.78  clicks/step 1.00  beams none 0.00 left90 0.00 left45 0.00 ahead 0.99 right45 0.01 right90 0.00
+    PPO sample [echo zeros] coverage 17.9 cells (4.5 m^2)  path 17.0 m  collisions/episode 23.8  collisions/m 1.40  clicks/step 0.99  beams none 0.01 left90 0.02 left45 0.02 ahead 0.57 right45 0.30 right90 0.07
+
+## range + learned beam, click cost 0, seed 2  (1117/1117 steps 2001664 episodes 6664)
+### replica/office_2 (HELD OUT)
+    PPO greedy coverage 19.6 cells (4.9 m^2)  path 12.5 m  collisions/episode 22.4  collisions/m 1.79  clicks/step 0.94  beams none 0.06 left90 0.05 left45 0.28 ahead 0.37 right45 0.01 right90 0.23
+    PPO sample coverage 26.0 cells (6.5 m^2)  path 15.6 m  collisions/episode 40.3  collisions/m 2.58  clicks/step 0.86  beams none 0.14 left90 0.10 left45 0.22 ahead 0.25 right45 0.12 right90 0.17
+### replica/frl_apartment_4 (HELD OUT)
+    PPO greedy coverage 33.2 cells (8.3 m^2)  path 19.3 m  collisions/episode 14.6  collisions/m 0.76  clicks/step 0.94  beams none 0.06 left90 0.25 left45 0.10 ahead 0.29 right45 0.26 right90 0.05
+    PPO sample coverage 40.3 cells (10.1 m^2)  path 23.3 m  collisions/episode 21.1  collisions/m 0.90  clicks/step 0.89  beams none 0.11 left90 0.18 left45 0.14 ahead 0.23 right45 0.20 right90 0.13
+### replica/hotel_0 (HELD OUT)
+    PPO greedy coverage 18.0 cells (4.5 m^2)  path 13.0 m  collisions/episode 18.7  collisions/m 1.43  clicks/step 0.98  beams none 0.02 left90 0.03 left45 0.40 ahead 0.37 right45 0.00 right90 0.18
+    PPO sample coverage 20.7 cells (5.2 m^2)  path 14.6 m  collisions/episode 44.8  collisions/m 3.06  clicks/step 0.88  beams none 0.12 left90 0.13 left45 0.24 ahead 0.24 right45 0.12 right90 0.16
+### replica/room_2 (HELD OUT)
+    PPO greedy coverage 40.5 cells (10.1 m^2)  path 22.1 m  collisions/episode 21.1  collisions/m 0.96  clicks/step 0.96  beams none 0.04 left90 0.01 left45 0.18 ahead 0.37 right45 0.00 right90 0.40
+    PPO sample coverage 39.5 cells (9.9 m^2)  path 21.6 m  collisions/episode 30.0  collisions/m 1.39  clicks/step 0.89  beams none 0.11 left90 0.07 left45 0.21 ahead 0.29 right45 0.11 right90 0.21
+### office_2 + hotel_0, echoes zeros
+    PPO greedy [echo zeros] coverage 12.5 cells (3.1 m^2)  path 7.1 m  collisions/episode 9.8  collisions/m 1.38  clicks/step 1.00  beams none 0.00 left90 0.79 left45 0.12 ahead 0.00 right45 0.08 right90 0.00
+    PPO sample [echo zeros] coverage 19.4 cells (4.8 m^2)  path 14.7 m  collisions/episode 23.8  collisions/m 1.62  clicks/step 0.96  beams none 0.04 left90 0.35 left45 0.19 ahead 0.09 right45 0.25 right90 0.08
+    PPO greedy [echo zeros] coverage 10.8 cells (2.7 m^2)  path 6.9 m  collisions/episode 10.1  collisions/m 1.46  clicks/step 1.00  beams none 0.00 left90 0.80 left45 0.13 ahead 0.00 right45 0.07 right90 0.00
+    PPO sample [echo zeros] coverage 17.1 cells (4.3 m^2)  path 13.9 m  collisions/episode 25.5  collisions/m 1.84  clicks/step 0.97  beams none 0.03 left90 0.35 left45 0.19 ahead 0.08 right45 0.26 right90 0.08

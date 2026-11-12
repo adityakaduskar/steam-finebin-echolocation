@@ -561,3 +561,20 @@ Trained explorers re-evaluated on office_2 + hotel_0 (greedy, 30 episodes each, 
 Only the blind agents lose coverage with a 20-step memory (all three seeds); echo agents keep 70–100 % of their coverage with no memory
 at all but collide 3–6 times more; a memoryless blind agent stops after 1 m. Blind re-evaluation reproduces exactly; echo agents'
 re-evaluations differ by up to ~1 cell (acoustic simulation not bit-reproducible). A full paper draft is in `paper/` (TMLR template).
+
+## CPU-only checks while queues 8–9 train (2026-11-11)
+
+* **Grazing-angle deficit for the agent's own click** (`habitat_audio/nogpu_checks.py`, `results/nogpu_checks.json`). Evaluating the
+  engine's specular lobe by ray casting on the four held-out Replica meshes (50 poses each, 100k rays): first-bounce energy is 0.990 of
+  a mirror-correct lobe on average (minimum 0.976), 0.989 (minimum 0.952) in the first 2 ms; mean incidence angle of returned energy 8.0°.
+* **Reproducibility.** Steam Audio redraws its random rays every run: with 1 thread and the same simulator two identical clicks differ
+  by 1.2 % in energy and 1454 of 4096 sonar cells change (8 threads: 0.9 %, 1368). Sonar-image correlation between identical clicks
+  0.942 (office_2) and 0.965 (frl_apartment_4), no better with 16384 rays (0.925, 0.959); range profile 0.999; strongest cell unchanged
+  in 79 of 80 pairs. The agents' echo observations are therefore noisy at a fixed pose and evaluations are not bit-reproducible.
+* **Probe detail** (`habitat_audio/probe_detail.py`, `runs/probe/probe_detail.json`). Path memory is equally decodable near/far and
+  ahead/behind, highest directly behind the agent (0.84 echo agents, 0.90 blind), and fades during the episode (sonar 0.91 → 0.74 → 0.67
+  for steps 0–49 / 50–149 / 150–299; blind 0.95 → 0.85 → 0.74). Blind agents' walkable-space knowledge is local (0.75 within 1 m, 0.58 beyond 2 m).
+* **Literature search** (research agent): closest prior work is Zhu, Rahtu, Zhao, arXiv:2207.01136 (PointGoal with GPS + binaural echoes,
+  echoes help: SPL 0.547 vs 0.491 on Replica), which reports the opposite of our single-seed point-goal result; also Hu et al. IROS 2023,
+  Yu et al. Neural Computation 2023, Mohan & Vanderelst SSCI 2020, Nguyen & Vanderelst SSCI 2022. Paper novelty claims rewritten.
+* **Prepared, needs the GPU:** `ppo_eval --log-collisions` + `collision_repeats.py`, queued as `queue10.sh` behind queue 9.

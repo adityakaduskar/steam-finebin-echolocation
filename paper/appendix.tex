@@ -171,3 +171,27 @@ Episode length & 300 steps & Per click (learned-beam agents) & $-0.01$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
+
+\section{Additional measurements}
+\label{app:extra}
+\paragraph{Click-to-click variability.} With one thread and the same simulator object, two consecutive simulations of the same click (\texttt{office\_2}, learning settings) differ by up to 0.16 in impulse-response amplitude (peak 1.35) and by 1.2\% in total energy; 1{,}454 of the 4{,}096 sonar-image cells change. With eight threads the figures are 0.11, 0.9\% and 1{,}368 cells, so threading is not the cause. Over 20 poses per building the correlation between the $I_0$ channels of two identical clicks is 0.942 (minimum 0.913) in \texttt{office\_2} and 0.965 (minimum 0.924) in \texttt{frl\_apartment\_4}; with 16{,}384 rays instead of 2{,}048 it is 0.925 and 0.959, i.e.\ not higher. Range profiles correlate at 0.999 (minimum 0.997).
+
+\paragraph{Where and when path memory is decodable.} Table~\ref{tab:probedetail} breaks the MLP state probes of Experiment~3 down by distance from the agent and by time within the episode. Path memory is equally decodable near and far from the agent and ahead of and behind it, is highest for the cell directly behind the agent, and declines as the episode proceeds (for the sonar agent from 0.91 in the first 50 steps to 0.67 after step 150; for the blind agent from 0.95 to 0.74). The blind agents' knowledge of walkable space is local: 0.75 within 1\,m and 0.58 beyond 2\,m.
+
+\begin{table}[h]
+\caption{Experiment 3 in more detail: held-out AUROC of the MLP decoder on the recurrent state (mean over 3 seeds). ``Near'', ``mid'' and ``far'' are cells whose centres lie within 1\,m, 1--2\,m and more than 2\,m of the agent.}
+\label{tab:probedetail}
+\centering\small
+\begin{tabular}{lccccccccc}
+\toprule
+ & \multicolumn{3}{c}{Walkable} & \multicolumn{3}{c}{Path memory} & \multicolumn{3}{c}{Path memory by episode step} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+Agent & near & mid & far & near & mid & far & 0--49 & 50--149 & 150--299 \\
+\midrule
+Sonar image, fixed click & 0.810 & 0.782 & 0.813 & 0.782 & 0.770 & 0.754 & 0.910 & 0.739 & 0.666 \\
+Sonar image + learned beam & 0.795 & 0.768 & 0.799 & 0.762 & 0.750 & 0.757 & 0.883 & 0.724 & 0.657 \\
+Head-scan binaural & 0.765 & 0.726 & 0.768 & 0.768 & 0.756 & 0.756 & 0.884 & 0.734 & 0.673 \\
+Blind & 0.752 & 0.633 & 0.582 & 0.824 & 0.828 & 0.832 & 0.951 & 0.849 & 0.739 \\
+\bottomrule
+\end{tabular}
+\end{table}

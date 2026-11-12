@@ -610,3 +610,11 @@ Same training as queue 6 (penalty 0.05, 3 seeds). Held-out, greedy:
   and the range-only agents of queue 7 (27.7–32.0) are not better in coverage than the fair blind baseline. Paper corrected throughout.
 * **Forward-only beams** do not change the conclusion about learned aiming with the sonar image (within seed noise of the fixed click;
   click rates 0.48, 0.95, 0.92). With zeroed echoes these agents drop to 8.9 cells, with shuffled echoes to 13.3.
+
+## Are the memoryless agents' collisions repeats? (queue 10, 2026-11-12; `runs/queue10_results.md`)
+
+`ppo_eval --log-collisions` + `collision_repeats.py`, office_2 + hotel_0, greedy, 3 seeds. Share of collisions within 5 cm and 5° of an
+earlier collision in the same episode, memory intact → erased every step: sonar fixed click 14 ± 6 % → 47 ± 20 % (collisions 20.6 → 69.4);
+sonar learned beam 13 ± 3 % → 52 ± 14 % (15.9 → 88.1); range learned beam 3 ± 1 % → 18 ± 7 % (17.0 → 79.0); blind with memory 6 ± 3 %.
+No repeat happens on the very next step. So roughly half of the extra collisions of memoryless sonar agents are returns to an obstacle
+already hit from the same direction; the rest are at new places.

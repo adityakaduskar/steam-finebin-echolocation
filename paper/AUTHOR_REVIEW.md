@@ -99,3 +99,7 @@ The agent found no follow-up to Wijmans et al. 2023 that probes the memory of ec
   seed noise of the fixed click. The explanation offered ("the sonar image already resolves direction") remains an interpretation.
 * **Click-cost sweep** added to Experiment 2: click rate 0.91 → 0.11 as the cost rises from 0 to 0.1, coverage unchanged, collisions triple.
   The sentence "the aimed range clicks are used to avoid collisions, not to find new floor" is an interpretation of that table.
+
+* **J24 measured (queue 10, 2026-11-12).** Share of collisions at the same place (5 cm) and heading (5 deg) as an earlier collision of the
+  episode: sonar fixed click 14 % with memory, 47 % without (seeds 22, 72, 48 %); sonar learned beam 13 % → 52 %; range learned beam
+  3 % → 18 %; blind 6 % with memory. The paper sentence was replaced by these numbers; marker removed. The seed spread is large.

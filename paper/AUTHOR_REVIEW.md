@@ -85,3 +85,17 @@ You must read at least the first one before submission.
 The first names of the authors in the five new BibTeX entries (zhu2022beyond, hu2023learning, yu2023echo, mohan2020training,
 nguyen2022toward) and their page numbers are **unverified**: the agent could not open two of the papers. Check them.
 The agent found no follow-up to Wijmans et al. 2023 that probes the memory of echo or audio agents.
+
+## Update 2026-11-12: control runs (queue 9) and click-cost sweep are in the paper
+
+* **J20 changed a headline number.** A blind agent trained with the same auxiliary loss covers 29.9 ± 1.8 cells (24.5 ± 3.9 without).
+  The sonar image's advantage is therefore **+24 % (37.0 vs 29.9), not +51 %**; all three sonar seeds still exceed all three blind
+  seeds, and the sonar agent has 37.5 % fewer collisions. Abstract, introduction, Result 1, Table 3, Figure 4 and the conclusion were rewritten.
+  New consequences for you to weigh: (a) the head-scan agent (26.6) is now *below* the fair blind baseline; (b) the range-only agents
+  of Experiment 2 (27.7–32.0) are *no better in coverage* than the fair blind baseline, so Result 4 was rewritten ("without direction,
+  echoes add no coverage"); (c) Experiments 3 and 4 used the blind agents without the auxiliary loss, now listed as a remaining confound.
+  Consider probing/wiping the blind + auxiliary-loss agents (about 1.5 h of GPU).
+* **J11 resolved.** With forward-only beams the learned-beam sonar agent covers 35.0 ± 0.5 cells with 15.3 ± 6.4 collisions: still within
+  seed noise of the fixed click. The explanation offered ("the sonar image already resolves direction") remains an interpretation.
+* **Click-cost sweep** added to Experiment 2: click rate 0.91 → 0.11 as the cost rises from 0 to 0.1, coverage unchanged, collisions triple.
+  The sentence "the aimed range clicks are used to avoid collisions, not to find new floor" is an interpretation of that table.

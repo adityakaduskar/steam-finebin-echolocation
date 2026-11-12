@@ -47,6 +47,6 @@ python3 paper/gen_tables.py                            # regenerate figs/tab_per
 3. **AI-use disclosure**: TMLR's FAQ requires a first-page footnote stating LLM use (added) and says LLMs cannot be authors; see `AUTHOR_REVIEW.md` J22.
 4. **Licence**: Apache-2.0 added (`LICENSE`, `NOTICE`); change it if you prefer another.
 5. Click-cost sweep (queue 8 part B) is included in Experiment 2 (Table "Click-cost sweep").
-6. Controls for two confounds (blind + auxiliary loss; sonar + forward-only beams; 3 seeds each) are queued as queue 9 (`habitat_audio/queue9.sh`).
+6. Controls for two confounds (queue 9) are in the paper: the blind agent with auxiliary loss is stronger (29.9 cells), which reduced the headline sonar advantage from +51 % to +24 %.
 7. **Author judgement**: 26 marked passages, see `AUTHOR_REVIEW.md` and `main_review.pdf`.
 8. TMLR facts (checked 2026-11-11): double-blind, rolling, no fee, no page limit, template mandatory, main body over 12 pages gets a longer review timeline (ours is longer), arXiv posting allowed with the `preprint` style option, author list frozen at submission.

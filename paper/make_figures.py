@@ -106,8 +106,9 @@ def fig_probe():
     fig.tight_layout(w_pad=1.0); fig.savefig(F + "probe.pdf"); plt.close(fig)
 
 if __name__ == "__main__":
-    os.makedirs(F, exist_ok=True); fig_ir(); fig_sonar()
-    dots([("q6_sonar", "sonar image, fixed click", C["sonar"]), ("q6_sonar_beam", "sonar image + learned beam", C["sonar_beam"]), ("q6_echo_scan", "head-scan binaural", C["echo_scan"]), ("q6_blind", "blind (bump sensor)", C["blind"])], "exp1_sensors.pdf", (28.0, 31.8))
+    os.makedirs(F, exist_ok=True)
+    if "--results-only" not in sys.argv: fig_ir(); fig_sonar()
+    dots([("q6_sonar", "sonar image, fixed click", C["sonar"]), ("q6_sonar_beam", "sonar image + learned beam", C["sonar_beam"]), ("q9_sonar_beam_fwd", "sonar image + forward beams", "#008300"), ("q6_echo_scan", "head-scan binaural", C["echo_scan"]), ("q9_blind_aux", "blind + auxiliary loss", C["blind"]), ("q6_blind", "blind, no auxiliary loss", "#eda100")], "exp1_sensors.pdf", (28.0, 31.8))
     dots([("q6_sonar", "sonar image (Exp. 1)", C["sonar"]), ("q7_range_ahead", "range + fixed ahead beam", C["range_ahead"]), ("q7_range_scan", "range + scripted sweep", C["range_scan"]), ("q7_range_omni", "range + omni click", C["range_omni"]),
-          ("q7_range_beam", "range + learned beam", C["range_beam"]), ("q6_blind", "blind (Exp. 1)", C["blind"])], "exp2_range.pdf", (28.0, 31.8))
+          ("q7_range_beam", "range + learned beam", C["range_beam"]), ("q9_blind_aux", "blind + auxiliary loss (Exp. 1)", C["blind"])], "exp2_range.pdf", (28.0, 31.8))
     fig_curves(); fig_probe(); print("figures written to", F)

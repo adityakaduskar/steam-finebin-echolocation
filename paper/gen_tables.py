@@ -1,7 +1,7 @@
 """Writes figs/tab_per_building.tex (per-building, per-seed held-out results) from figs/per_building.json (made from the eval logs)."""
 import json, os, numpy as np
 D = json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/figs/per_building.json"))
-names = {"q6_sonar": "Sonar image, fixed click", "q6_sonar_beam": "Sonar image + learned beam", "q6_echo_scan": "Head-scan binaural", "q6_blind": "Blind",
+names = {"q6_sonar": "Sonar image, fixed click", "q6_sonar_beam": "Sonar image + learned beam", "q6_echo_scan": "Head-scan binaural", "q6_blind": "Blind, no auxiliary loss", "q9_blind_aux": "Blind + auxiliary loss", "q9_sonar_beam_fwd": "Sonar + learned forward beams",
          "q7_range_beam": "Range + learned beam", "q7_range_scan": "Range + scripted sweep", "q7_range_ahead": "Range + fixed ahead beam", "q7_range_omni": "Range + omni click"}
 bld = {"office_2": "office\\_2", "frl_apartment_4": "frl\\_apartment\\_4", "hotel_0": "hotel\\_0", "room_2": "room\\_2"}
 L = ["\\begin{tabular}{llrrrrrrrr}", "\\toprule", " & & \\multicolumn{4}{c}{Coverage (cells)} & \\multicolumn{4}{c}{Collisions per episode} \\\\",

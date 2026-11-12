@@ -592,3 +592,21 @@ Range + learned-beam explorer retrained with click cost 0, 0.03, 0.1 (3 seeds ea
 
 Click rate falls with cost (0.91 → 0.70 → 0.56 → 0.11); coverage does not (within seed noise); collisions triple at cost 0.1 (the seed
 that never clicks: 62.9 per episode, far above the blind agents' 20.6). Aimed range clicks buy collision avoidance, not coverage.
+
+## Controls for two confounds (queue 9, finished 2026-11-12 ~12:45; `runs/queue9_results.md`)
+
+Same training as queue 6 (penalty 0.05, 3 seeds). Held-out, greedy:
+
+| agent | coverage (cells) | collisions / episode |
+|---|---|---|
+| blind + auxiliary wall-distance loss | 29.9 ± 1.8 (30.3, 27.5, 31.9) | 28.0 ± 7.1 |
+| blind without auxiliary loss (queue 6) | 24.5 ± 3.9 | 20.6 ± 5.3 |
+| sonar image + learned forward-only beams | 35.0 ± 0.5 (34.7, 34.6, 35.6) | 15.3 ± 6.4 |
+| sonar image + learned figure-of-eight beams (queue 6) | 33.6 ± 4.7 | 13.2 ± 2.4 |
+| sonar image, fixed click (queue 6) | 37.0 ± 1.5 | 17.5 ± 6.7 |
+
+* **The auxiliary loss helps the blind agent** (+5.4 cells, more collisions). Against this fair baseline the sonar image's advantage is
+  +7.1 cells (+24 %), not +51 %, with 37.5 % fewer collisions; all sonar seeds still exceed all blind seeds. The head-scan agent (26.6)
+  and the range-only agents of queue 7 (27.7–32.0) are not better in coverage than the fair blind baseline. Paper corrected throughout.
+* **Forward-only beams** do not change the conclusion about learned aiming with the sonar image (within seed noise of the fixed click;
+  click rates 0.48, 0.95, 0.92). With zeroed echoes these agents drop to 8.9 cells, with shuffled echoes to 13.3.

@@ -43,6 +43,9 @@ TASKS.update({
     "explore_range_ahead": dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range", beams=(FWD("ahead", 0.0),), beam_cycle=True),
     "explore_range_scan":  dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range", beams=BEAMS_FWD, beam_cycle=True),
     "explore_range_beam":  dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="range", beams=(("none", 0.0, 0.0, 1.0),) + BEAMS_FWD, click_cost=0.01),
+    # control for Experiment 1: sonar image with the forward-only beams (none / omni / forward lobe at 45 left, ahead, 45 right)
+    "explore_sonar_beam_fwd": dict(goal_sound=False, self_click=True, pointgoal=False, sliding=False, explore=True, contact=True, max_steps=300, echo_obs="sonar",
+                                   beams=(("none", 0.0, 0.0, 1.0), ("omni", 0.0, 0.0, 1.0), FWD("left45", 45.0), FWD("ahead", 0.0), FWD("right45", -45.0)), click_cost=0.01),
     "sonar_beam_pointgoal": dict(goal_sound=False, self_click=True, pointgoal=True, sliding=False, echo_obs="sonar", beams=BEAMS, click_cost=0.01),
 })
 ENV_KW = dict(BASE_KW, **TASKS["audiogoal"])

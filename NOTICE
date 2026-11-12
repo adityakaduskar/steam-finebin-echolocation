@@ -1,0 +1,8 @@
+Steam Audio echolocation experiments
+Copyright 2026 adityakaduskar
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This repository contains modifications (patches/) to Steam Audio, Copyright Valve Corporation, licensed under the Apache License 2.0.
+It uses, but does not redistribute, Habitat-sim and habitat-lab (MIT, Meta Platforms), SoundSpaces (CC-BY-4.0 / MIT components, Meta
+Platforms) and the Replica dataset (Replica research licence, Meta Platforms).

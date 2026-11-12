@@ -578,3 +578,17 @@ re-evaluations differ by up to ~1 cell (acoustic simulation not bit-reproducible
   echoes help: SPL 0.547 vs 0.491 on Replica), which reports the opposite of our single-seed point-goal result; also Hu et al. IROS 2023,
   Yu et al. Neural Computation 2023, Mohan & Vanderelst SSCI 2020, Nguyen & Vanderelst SSCI 2022. Paper novelty claims rewritten.
 * **Prepared, needs the GPU:** `ppo_eval --log-collisions` + `collision_repeats.py`, queued as `queue10.sh` behind queue 9.
+
+## Click-cost sweep (queue 8 part B, finished 2026-11-12 morning; `runs/queue8_results.md`)
+
+Range + learned-beam explorer retrained with click cost 0, 0.03, 0.1 (3 seeds each; 0.01 = queue 7). Held-out, greedy:
+
+| click cost | coverage (cells) | collisions / episode | clicks / step (seeds 1, 2, 3) |
+|---|---|---|---|
+| 0 | 29.4 ± 2.6 | 20.3 ± 4.4 | 0.81, 0.95, 0.96 |
+| 0.01 | 27.7 ± 1.4 | 15.4 ± 2.0 | 0.38, 0.96, 0.76 |
+| 0.03 | 26.8 ± 5.8 | 17.1 ± 6.6 | 0.95, 0.34, 0.38 |
+| 0.1 | 31.9 ± 0.9 | 48.2 ± 13.9 | 0.19, 0.13, 0.00 |
+
+Click rate falls with cost (0.91 → 0.70 → 0.56 → 0.11); coverage does not (within seed noise); collisions triple at cost 0.1 (the seed
+that never clicks: 62.9 per episode, far above the blind agents' 20.6). Aimed range clicks buy collision avoidance, not coverage.

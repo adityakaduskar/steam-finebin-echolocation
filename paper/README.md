@@ -46,7 +46,7 @@ python3 paper/gen_tables.py                            # regenerate figs/tab_per
 2. **Anonymised code**: `scripts/make_anonymous_bundle.sh` builds `paper/supplementary_anonymous.zip` (18 MB; TMLR allows 100 MB of anonymised PDF/ZIP supplementary material). Rebuild it after the last commit before submitting.
 3. **AI-use disclosure**: TMLR's FAQ requires a first-page footnote stating LLM use (added) and says LLMs cannot be authors; see `AUTHOR_REVIEW.md` J22.
 4. **Licence**: Apache-2.0 added (`LICENSE`, `NOTICE`); change it if you prefer another.
-5. Not included yet: the click-cost sweep (queue 8 part B, still training when the draft was written).
+5. Click-cost sweep (queue 8 part B) is included in Experiment 2 (Table "Click-cost sweep").
 6. Controls for two confounds (blind + auxiliary loss; sonar + forward-only beams; 3 seeds each) are queued as queue 9 (`habitat_audio/queue9.sh`).
 7. **Author judgement**: 26 marked passages, see `AUTHOR_REVIEW.md` and `main_review.pdf`.
 8. TMLR facts (checked 2026-11-11): double-blind, rolling, no fee, no page limit, template mandatory, main body over 12 pages gets a longer review timeline (ours is longer), arXiv posting allowed with the `preprint` style option, author list frozen at submission.

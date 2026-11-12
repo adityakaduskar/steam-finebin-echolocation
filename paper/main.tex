@@ -29,7 +29,7 @@ We connect the patched engine to Habitat-sim and train recurrent PPO agents that
 \J{1}(i) when a goal vector is supplied, echoes do not improve navigation success in held-out buildings (0.38 with echoes, 0.39 without);
 (ii) when the agent must explore without any goal, echoes help substantially: an agent that receives a range-by-direction ``sonar image'' computed from the first-order Ambisonic echo response covers \pmsd{37.0}{1.5} cells of \cell{} in 300 steps, against \pmsd{24.5}{3.9} for a blind agent with a bump sensor and 28.0 for a scripted bump-and-turn explorer, with fewer collisions than either;
 (iii) the same echoes presented as binaural spectrograms from three head orientations yield only \pmsd{26.6}{3.3} cells at 2.7 times the simulation cost;
-(iv) when the echo carries distance but no direction, agents that choose where to aim each click do not cover more ground than a scripted sweep, but collide least of all agents (\pmsd{15.4}{2.0} collisions per episode) and one of three seeds learns to stay silent on 62\% of steps;
+(iv) when the echo carries distance but no direction, agents that choose where to aim each click do not cover more ground than a scripted sweep, but collide least of all agents (\pmsd{15.4}{2.0} collisions per episode); raising the cost of a click from 0 to 0.1 lowers their click rate from 0.91 to 0.11 per step without lowering coverage, while collisions rise to \pmsd{48.2}{13.9};
 (v) decoders trained on the agents' recurrent states recover which nearby floor cells the agent has already visited in held-out buildings (AUROC 0.76--0.83), and this path memory is strongest in the blind agents, while agents that hear the room hold local geometry in their current observation rather than in memory;
 (vi) erasing the recurrent memory every 20 steps reduces the blind agents' coverage by 15\% and leaves the echo agents' coverage unchanged, and erasing it at every step multiplies the echo agents' collisions by 3 to 6 while they still cover 70--100\% of their usual area.
 All code, the simulator patch, raw evaluation logs and figure scripts are released.
@@ -339,6 +339,24 @@ Blind (Exp.~1) & \pmsd{24.5}{3.9} & \pmsd{20.6}{5.3} & 20.5 & 0 \\
 
 \paragraph{Result 7: a scripted sweep is the most reproducible range-only sensor.} Its three seeds cover 30.0, 30.6 and 30.7 cells. Sweeping gives the recurrent policy five directions every five steps without any learning of where to look.
 
+\paragraph{What does a click buy? A sweep of the click cost.} We retrained the learned-beam agent with the cost per click set to 0, 0.03 and 0.1 (three seeds each; 0.01 is the setting above; the per-step time cost is 0.01 and a new cell is worth 1). Table~\ref{tab:clickcost} shows that the click rate falls steadily with the cost, from 0.91 clicks per step when clicks are free to 0.11 at a cost of 0.1, where one seed never clicks at all. Coverage does not fall with it: it stays between 26.8 and 31.9 cells, within the spread across seeds. Collisions do change: with clicks at a cost of 0.1 the agents collide \pmsd{48.2}{13.9} times per episode (the seed that never clicks: 62.9), about three times as often as at a cost of 0.01, and more than twice as often as the blind agents of Experiment~1 (\pmsd{20.6}{5.3}). In this task, therefore, the aimed range clicks are used to avoid collisions, not to find new floor; an agent that has learned to rely on them and then gives them up for cost reasons moves as far but hits much more. Even when clicks are free the agents do not click on every step (0.81, 0.95 and 0.96 clicks per step).
+
+\begin{table}[t]
+\caption{Click-cost sweep for the range + learned-beam agent (held-out buildings, greedy policy, mean $\pm$ s.d.\ over 3 seeds).}
+\label{tab:clickcost}
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+Cost per click & Coverage (cells) & Collisions / episode & Clicks per step (seeds 1, 2, 3) \\
+\midrule
+0 & \pmsd{29.4}{2.6} & \pmsd{20.3}{4.4} & 0.81, 0.95, 0.96 \\
+0.01 (Table~\ref{tab:exp2}) & \pmsd{27.7}{1.4} & \pmsd{15.4}{2.0} & 0.38, 0.96, 0.76 \\
+0.03 & \pmsd{26.8}{5.8} & \pmsd{17.1}{6.6} & 0.95, 0.34, 0.38 \\
+0.1 & \pmsd{31.9}{0.9} & \pmsd{48.2}{13.9} & 0.19, 0.13, 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 % ======================================================================================================
 \section{Experiment 3: what do the agents remember?}
 \label{sec:probe}
@@ -394,7 +412,7 @@ Visited cells are always walkable, so a decoder could score above chance on \emp
 A 172-line patch turns Steam Audio into a simulator in which single echoes arrive at the correct sample, and makes it possible to study learned echolocation in real building geometry at several hundred environment steps per second on one desktop CPU. In that setting, echoes of the agent's own clicks did not help reach a goal whose position was given, but increased the floor area explored in unseen buildings by half when presented as a range-by-bearing image, and not at all when presented as binaural spectrograms. Aiming the click was learnable but made agents careful rather than fast. Probing and memory erasure showed that all explorers remember their own path, that blind explorers depend on that memory most, and that echo-guided explorers need memory mainly to avoid repeating collisions.
 
 \subsubsection*{Reproducibility statement}
-The repository accompanying this submission contains the patch against Steam Audio 4.8.1 and build scripts, the C validation harness and its analysis, the Python binding, the environment, training and evaluation code, the shell scripts with the exact command line of every run, the evaluation logs and per-update training logs of every run reported here, and the script that regenerates all figures and the per-building table from those logs. \J{21}Policy checkpoints (about 30\,MB each) and raw impulse responses are not included in the repository because of their size. All experiments ran on one workstation with an AMD Ryzen~7 5800X (8 cores), 94\,GB of memory and one NVIDIA RTX~2080~Ti; the acoustics run on the CPU and the GPU is used for the policy only. The 24 training runs of Experiments 1 and 2 took 30.7 hours in total.
+The repository accompanying this submission contains the patch against Steam Audio 4.8.1 and build scripts, the C validation harness and its analysis, the Python binding, the environment, training and evaluation code, the shell scripts with the exact command line of every run, the evaluation logs and per-update training logs of every run reported here, and the script that regenerates all figures and the per-building table from those logs. \J{21}Policy checkpoints (about 30\,MB each) and raw impulse responses are not included in the repository because of their size. All experiments ran on one workstation with an AMD Ryzen~7 5800X (8 cores), 94\,GB of memory and one NVIDIA RTX~2080~Ti; the acoustics run on the CPU and the GPU is used for the policy only. The 24 training runs of Experiments 1 and 2 took 30.7 hours in total; the nine runs of the click-cost sweep took a further 9.2 hours.
 
 \subsubsection*{Use of AI assistance}
 \J{22}The simulator patch, environment, training and analysis code, the experiment scripts and the first draft of this manuscript were written with an AI coding assistant working under the direction of the author, who posed the research questions, selected the experiments and takes responsibility for all content. Every number in the paper was produced by the released scripts from the released logs.

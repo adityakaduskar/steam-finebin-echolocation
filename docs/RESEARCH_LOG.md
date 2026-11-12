@@ -545,3 +545,19 @@ Held-out buildings, greedy policy, mean ± s.d. over seeds:
 * Overall: aiming a click is a genuine active-sensing behaviour when it is the only source of direction, and RL agents find it, but in
   this task it buys safety and sensing economy rather than coverage; a sensor that resolves direction by itself (the sonar image) remains
   clearly better.
+
+## Memory wipe (queue 8 part A, 2026-11-11; `runs/queue8_results.md`, paper Experiment 4)
+
+Trained explorers re-evaluated on office_2 + hotel_0 (greedy, 30 episodes each, 3 seeds) with the GRU state zeroed every N steps
+(`ppo_eval --reset-every N --greedy-only`). Coverage (cells) / collisions per episode:
+
+| agent | memory intact | erased every 20 steps | erased every step |
+|---|---|---|---|
+| blind | 21.3 ± 3.2 / 22.2 ± 6.1 | 18.2 ± 2.4 / 17.6 ± 2.1 | 3.2 ± 0.0 / 1.0 ± 0.0 |
+| sonar image, fixed click | 25.4 ± 0.8 / 22.7 ± 9.5 | 27.5 ± 1.0 / 20.8 ± 8.6 | 20.9 ± 2.4 / 71.4 ± 6.9 |
+| sonar image + learned beam | 23.3 ± 3.7 / 15.1 ± 4.3 | 23.9 ± 1.8 / 17.9 ± 4.3 | 16.3 ± 2.8 / 89.3 ± 15.5 |
+| range + learned beam | 21.8 ± 1.5 / 16.9 ± 3.2 | 24.2 ± 1.8 / 18.1 ± 2.8 | 22.8 ± 1.8 / 78.6 ± 8.0 |
+
+Only the blind agents lose coverage with a 20-step memory (all three seeds); echo agents keep 70–100 % of their coverage with no memory
+at all but collide 3–6 times more; a memoryless blind agent stops after 1 m. Blind re-evaluation reproduces exactly; echo agents'
+re-evaluations differ by up to ~1 cell (acoustic simulation not bit-reproducible). A full paper draft is in `paper/` (TMLR template).

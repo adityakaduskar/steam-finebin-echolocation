@@ -1,0 +1,17 @@
+Experiment~3 shows what can be read out of memory, not whether the agents need it. Here we remove it.
+
+\paragraph{Setup.} We re-evaluate trained agents on \texttt{office\_2} and \texttt{hotel\_0} (greedy policy, the same 30 start poses per building as before, 3 seeds) while setting the GRU state to zero every $N$ steps. The zero state is the state every training episode starts with, so the erased state itself is familiar to the policy. The embedding of the previous action (and beam) is still supplied. $N=20$ removes everything older than at most 20 steps (at most 5\,m of travel); $N=1$ removes memory entirely, so that the action depends only on the current observation and the previous action. The agents are the blind agent, the two sonar-image agents of Experiment~1 and the range + learned-beam agent of Experiment~2.
+
+\begin{table}[t]
+\caption{Experiment 4. Exploration on \texttt{office\_2} and \texttt{hotel\_0} with the recurrent memory erased every 20 steps or every step (greedy, mean $\pm$ s.d.\ over 3 seeds). Entries: coverage in cells / collisions per episode / path length in metres.}
+\label{tab:wipe}
+\centering\small
+\resizebox{\linewidth}{!}{%
+\input{figs/tab_wipe.tex}}
+\end{table}
+
+\paragraph{Result 11: only the blind agents lose coverage when memory older than 20 steps is erased.} Their coverage falls from \pmsd{21.3}{3.2} to \pmsd{18.2}{2.4} cells ($-15\%$), and it falls in every seed ($16.8\to15.6$, $23.2\to17.5$, $23.8\to21.3$). For the three echo agents coverage does not fall in the mean (sonar, fixed click: $25.4\to27.5$; sonar, learned beam: $23.3\to23.9$; range, learned beam: $21.8\to24.2$) and collisions change by less than their standard deviation over seeds. Taken with Result~9, this supports the reading that blind explorers rely on a longer record of their own path, whereas agents that hear the room can re-derive what they need from the next echo.
+
+\paragraph{Result 12: without any memory, echo agents still cover ground but collide three to six times more; blind agents stop.} With the state erased at every step the sonar agent with a fixed click still covers \pmsd{20.9}{2.4} cells (82\% of its normal coverage), the sonar agent with a learned beam \pmsd{16.3}{2.8} (70\%), and the range + learned-beam agent \pmsd{22.8}{1.8} (no loss), but their collisions rise from 22.7 to 71.4, from 15.1 to 89.3 and from 16.9 to 78.6 per episode. Short-term memory is therefore what keeps these agents from walking into the same obstacle repeatedly, while their choice of where to go is largely reactive to the current echo. The memoryless blind agent moves 1.0\,m, collides once and makes no further progress (3.2 cells in all three seeds): its only inputs are then one bump bit and its previous action.
+
+\paragraph{Repeatability of the evaluation.} The ``memory intact'' column repeats the evaluation of Table~\ref{tab:ablation} on the same start poses. For the blind agents, which use no acoustics, the two evaluations agree exactly (per-seed coverage 16.8, 23.2, 23.8 in both). For the sonar agent with a fixed click the three-seed mean is 25.4 here against 26.2 there, and for the range + learned-beam agent 21.8 against 22.1: the acoustic simulation is not bit-reproducible between runs, and differences of up to about one cell in a three-seed mean should not be interpreted.

@@ -82,6 +82,7 @@ Exploration in the dark on four held-out Replica buildings (collision penalty 0.
 ```
 README.md                    this file
 docs/RESEARCH_LOG.md         chronological record of everything (physics, patches, every training queue, caveats)
+paper/                       paper draft (TMLR template): main.tex, main.pdf, figure and table scripts, README with open items
 patches/                     steam-audio-4.8.1-echolocation.patch (diff against Valve's v4.8.1 core)
 scripts/fetch_sdk.sh         download the stock 4.8.1 SDK (headers, docs, stock libphonon.so) into sdk/
 scripts/build_core.sh        clone v4.8.1, apply the patch, build sdk/lib/patched/ and sdk/lib/patched_embree/

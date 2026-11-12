@@ -1,0 +1,173 @@
+\section{Simulator validation in full}
+\label{app:validation}
+
+All single-wall tests use a C program that calls the Steam Audio C API directly: one planar wall (200\,m $\times$ 200\,m unless stated), one source, one listener, one bounce, first-order Ambisonics, 48\,kHz, 65{,}536 rays for the stock library and 262{,}144 rays for the patched library. The impulse response is obtained by sending a unit impulse through the engine's convolution reflection effect after one silent frame. About 100 scenarios are run per library and compared with closed-form predictions by a script that writes a pass/fail list. Table~\ref{tab:val-stock} lists the checks on the unmodified library and Table~\ref{tab:val-patched} those on the patched library.
+
+\begin{table}[h]
+\caption{Checks on the unmodified Steam Audio 4.8.1 library (25 of 25 pass).}
+\label{tab:val-stock}
+\centering\small
+\begin{tabular}{p{0.2\linewidth}p{0.75\linewidth}}
+\toprule
+Quantity & Result \\
+\midrule
+Reflection delay & reflection energy appears in the correct 10\,ms bin of $(r_\text{refl}-r_\text{direct})/c$ for 13 wall distances and 5 source distances \\
+Speed of sound & bin indices at five path lengths chosen to separate the two hypotheses agree with 340\,m/s in 5 of 5 cases and with 343\,m/s in 2 of 5 \\
+Absorption & $E(\alpha)/E(0)=1-\alpha$ to four decimals; per-band spectral ratios within 0.02 of the band-filter model \\
+Distance & $E \propto r_\text{refl}^{-2}$, log--log slope $-1.998$, spread 0.24\% over 6--103\,m; energy follows the image-source path length, not the source-to-wall distance \\
+Absolute level & measured 5.60 against 5.93 predicted from the noise reconstruction constants \\
+Direction & first-order channels point to the image source; N3D gain 1.715 (expected 1.732) \\
+Scattering & on a 2$\times$2\,m panel $E(s)/E(0)=1+s(R-1)$ with $R=0.453$ (Lambertian/specular ratio), within 0.015 \\
+Finite panel & specular point on the panel: 0.998 of the infinite wall; specular point 5\,m off the panel: $4\times10^{-12}$ \\
+Direct path & occlusion 0 behind the wall, 1 otherwise; attenuation $1/\max(r,1\,\text{m})$; air absorption $e^{-k_b r}$ exact \\
+Geometry & reversed triangle winding gives an identical reflection; a source behind the wall gives none; an empty scene gives a zero response \\
+Ray count & 65{,}536 rays within $10^{-4}$ of 262{,}144 rays in energy; 1{,}024 rays within 4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{Checks on the patched library with one-sample bins and sparse reconstruction (26 of 26 pass).}
+\label{tab:val-patched}
+\centering\small
+\begin{tabular}{p{0.2\linewidth}p{0.75\linewidth}}
+\toprule
+Quantity & Result \\
+\midrule
+Arrival time & onset sample equals $\lfloor (r_\text{refl}-1\,\text{cm}-r_\text{direct})f_s/c\rfloor$ within 1 sample for 13 wall distances from 1 to 15\,m; fitted speed of sound 340.01\,m/s \\
+Long range & 34--102\,m paths: onset within 0.8 sample with $10^6$ rays; with 65{,}536 rays only 1--2 rays fall in each sample-wide ring of the specular spot and onsets jitter by a few samples \\
+Glossy tail & centroid minus onset is 0.87--0.98 of the predicted mean excess path $2w/(n+1)$ for wall distances $w=1.5$--40\,m \\
+Distance & $E\,r^2$ constant to 0.3\% over 3--80\,m (source at listener) and 0.26\% over 6--103\,m (source apart); slopes $-2.003$ and $-1.998$ \\
+Absolute level & $E\,/\,[(1+2/n)/(4\pi r^2)]=12.2$ against $4\pi=12.57$ \\
+Absorption & $1-\alpha$ to four decimals; band ratios within 0.024 of the complementary-filter model \\
+Air absorption & per band within 0.018 of $e^{-k_b d}$ evaluated at each sample's distance \\
+Scattering & infinite diffuse wall: energy ratio 2.02 against 1.96 analytic; 2$\times$2\,m panel within 0.016 \\
+Direction, occlusion, transmission, two-sidedness, empty scene & same outcome as for the stock library \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Shoebox room.} 6$\times$4$\times$3\,m, source and listener at different positions, 262{,}144 rays, patched library. (1) All six first-order echoes begin at the sample predicted by the image-source model. (2) Their energies are 0.92--1.15 of the image-source prediction once the $\cos\theta$ factor of Section~\ref{sec:deviations} is applied at the last wall, and 0.70--1.04 of a pure mirror model. (3) Their energy-weighted direction vectors differ from the predicted direction vectors by at most 0.15. (4) The energy decay over the first 40\,ms is within 1.05\,dB of a three-bounce image-source model with the $\cos\theta$ factor. (5) Reverberation time by Schroeder backward integration, divided by the Eyring prediction, is 0.91, 1.04, 1.11 for diffuse walls with $\alpha=0.1,0.3,0.5$ and 1.05, 1.17, 1.24 for specular walls. (6) Steam Audio's own parametric reverberation estimate agrees with the Schroeder value of its impulse response to 1\%. (7) The Embree build gives the same ratios. Seven of seven checks pass.
+
+\paragraph{Echo timing inside the learning environment.} In a Habitat test apartment (382{,}000 triangles), at 12 random poses, the first echo in the binaural click response arrived at $2d/c$ for the nearest surface distance $d$ with a maximum error of 0.7\,ms after removing the 3.25\,ms latency of the binaural decoder.
+
+\section{Buildings}
+\label{app:scenes}
+Table~\ref{tab:scenes} lists the navigable floor area of every Replica scene as reported by Habitat's navigation mesh for an agent of radius 0.1\,m and height 1.5\,m.
+
+\begin{table}[h]
+\caption{Replica scenes and navigable area. One training environment runs in each of the 14 training scenes.}
+\label{tab:scenes}
+\centering\small
+\begin{tabular}{lr@{\hskip 2em}lr@{\hskip 2em}lr}
+\toprule
+Training scene & m$^2$ & Training scene & m$^2$ & Held-out scene & m$^2$ \\
+\midrule
+apartment\_0 & 89.0 & frl\_apartment\_5 & 44.2 & office\_2 & 12.5 \\
+apartment\_1 & 52.9 & office\_0 & 7.6 & frl\_apartment\_4 & 39.6 \\
+apartment\_2 & 44.7 & office\_1 & 5.4 & hotel\_0 & 16.0 \\
+frl\_apartment\_0 & 40.4 & office\_3 & 20.3 & room\_2 & 13.2 \\
+frl\_apartment\_1 & 42.0 & office\_4 & 22.9 & & \\
+frl\_apartment\_2 & 39.2 & room\_0 & 17.1 & & \\
+frl\_apartment\_3 & 42.3 & room\_1 & 11.1 & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Per-building and sampled-action results}
+\label{app:perbuilding}
+Table~\ref{tab:perbuilding} gives the greedy-policy results of every seed in every held-out building for Experiments 1 and 2. Table~\ref{tab:sampled} repeats Tables~\ref{tab:exp1} and~\ref{tab:exp2} for actions sampled from the policy distribution.
+
+\begin{table}[h]
+\caption{Greedy-policy results per held-out building and seed (30 episodes each).}
+\label{tab:perbuilding}
+\centering\footnotesize
+\input{figs/tab_per_building.tex}
+\end{table}
+
+\begin{table}[h]
+\caption{Results with sampled actions on the four held-out buildings (mean $\pm$ s.d.\ over 3 seeds).}
+\label{tab:sampled}
+\centering\small
+\begin{tabular}{lcc}
+\toprule
+Agent & Coverage (cells) & Collisions / episode \\
+\midrule
+Sonar image, fixed click & \pmsd{38.4}{0.8} & \pmsd{26.4}{7.4} \\
+Sonar image + learned beam & \pmsd{36.6}{2.2} & \pmsd{24.0}{4.0} \\
+Head-scan binaural & \pmsd{31.1}{1.9} & \pmsd{32.5}{5.1} \\
+Blind & \pmsd{27.8}{1.4} & \pmsd{31.3}{4.6} \\
+\addlinespace
+Range + fixed ahead beam & \pmsd{33.3}{1.1} & \pmsd{42.1}{12.2} \\
+Range + scripted sweep & \pmsd{31.8}{0.7} & \pmsd{37.6}{4.5} \\
+Range + omni click & \pmsd{31.2}{3.4} & \pmsd{42.9}{15.7} \\
+Range + learned beam & \pmsd{30.9}{1.6} & \pmsd{27.3}{5.7} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Probe results with linear decoders}
+\label{app:probe}
+Table~\ref{tab:probe} gives all probe results of Experiment~3, including linear decoders and the \emph{visited} label evaluated over all cells (which, as explained in Section~\ref{sec:probe}, can be partly inferred from geometry).
+
+\begin{table}[h]
+\caption{Experiment 3, held-out AUROC (mean $\pm$ s.d.\ over 3 seeds). ``State'' = decoder input is the GRU state; ``Obs.'' = decoder input is the pooled current observation.}
+\label{tab:probe}
+\centering\footnotesize
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccccc}
+\toprule
+ & & \multicolumn{2}{c}{Walkable} & \multicolumn{2}{c}{Visited, all cells} & \multicolumn{2}{c}{Visited, walkable cells} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+Agent & Decoder & State & Obs. & State & Obs. & State & Obs. \\
+\midrule
+Sonar, fixed click & linear & \pmsd{0.790}{0.008} & \pmsd{0.806}{0.006} & \pmsd{0.755}{0.021} & \pmsd{0.781}{0.008} & \pmsd{0.677}{0.022} & \pmsd{0.618}{0.008} \\
+ & MLP & \pmsd{0.803}{0.007} & \pmsd{0.832}{0.002} & \pmsd{0.861}{0.003} & \pmsd{0.808}{0.007} & \pmsd{0.762}{0.006} & \pmsd{0.625}{0.009} \\
+Sonar + learned beam & linear & \pmsd{0.775}{0.014} & \pmsd{0.749}{0.017} & \pmsd{0.739}{0.024} & \pmsd{0.714}{0.017} & \pmsd{0.674}{0.015} & \pmsd{0.582}{0.007} \\
+ & MLP & \pmsd{0.789}{0.016} & \pmsd{0.779}{0.019} & \pmsd{0.840}{0.006} & \pmsd{0.735}{0.019} & \pmsd{0.755}{0.010} & \pmsd{0.579}{0.005} \\
+Head-scan binaural & linear & \pmsd{0.754}{0.014} & \pmsd{0.745}{0.015} & \pmsd{0.780}{0.032} & \pmsd{0.722}{0.014} & \pmsd{0.708}{0.023} & \pmsd{0.575}{0.015} \\
+ & MLP & \pmsd{0.755}{0.016} & \pmsd{0.761}{0.018} & \pmsd{0.831}{0.012} & \pmsd{0.747}{0.013} & \pmsd{0.757}{0.009} & \pmsd{0.594}{0.011} \\
+Blind & linear & \pmsd{0.611}{0.006} & \pmsd{0.502}{0.002} & \pmsd{0.774}{0.046} & \pmsd{0.509}{0.010} & \pmsd{0.763}{0.043} & \pmsd{0.513}{0.013} \\
+ & MLP & \pmsd{0.614}{0.002} & \pmsd{0.503}{0.003} & \pmsd{0.843}{0.010} & \pmsd{0.511}{0.010} & \pmsd{0.830}{0.011} & \pmsd{0.515}{0.013} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\section{Details of the preliminary single-seed runs}
+\label{app:prelim}
+\paragraph{P2 in numbers.} Point-goal in the dark in the Habitat test scene \texttt{apartment\_1}, 100 held-out episodes, sampled actions. After 1.5 million steps with $\lambda=0.1$: head-scan echo agent, success 0.64, SPL 0.49, 12.2 collisions per episode; single-orientation echo agent, 0.44, 0.38, 9.7; blind agent, 0.20, 0.19, 1.8 (the blind agent's low collision count reflects that it stops after 11--21 steps). With shuffled echoes the two echo agents fall to 0.36 and 0.27 success with 50 and 19.5 collisions. After 0.6 million steps, zeroing the echoes changed collisions per episode from 2.7 to 22 and from 8.0 to 24 (single orientation, seeds 1 and 2) and from 2.4 to 53 and from 11.5 to 40 (head scan, seeds 1 and 2).
+\paragraph{P3 in numbers.} Training on \texttt{apartment\_1}, \texttt{van-gogh-room} and \texttt{skokloster-castle} for 2 million steps; point-goal success (greedy) of the head-scan agent with auxiliary loss against the blind agent: 0.35 against 0.29, 0.93 against 0.85, 0.88 against 0.73 in the three training scenes, and 0.18 against 0.21 in the unseen Matterport3D house \texttt{17DRP5sb8fy} (0.31 with shuffled echoes). For exploration in the same unseen house the head-scan explorer covered 12.6 cells with real echoes, 20.4 with shuffled echoes and 29.1 with zeroed echoes, against 26.3 for the blind agent and 32.6 for bump-and-turn: with too few training buildings, real echoes in an unfamiliar building suppressed movement.
+\paragraph{Exploration with $\lambda=0.02$ (one seed per agent).} Held-out coverage / collisions: sonar image with fixed click 41.9 / 38.6; head-scan binaural 36.7 / 18.6; sonar image with learned beam 25.6 / 8.6; blind 18.2 / 12.9; bump-and-turn 28.5 / 31.5. These runs had no blank-echo augmentation. The head-scan result at this penalty (36.7 cells, one seed) is higher than its three-seed mean at $\lambda=0.05$ (26.6); we cannot separate the effect of the penalty from seed variation with one run.
+
+\section{Hyperparameters}
+\label{app:hyper}
+\begin{table}[h]
+\caption{Settings shared by all runs of Experiments 1 and 2.}
+\label{tab:hyper}
+\centering\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{ll@{\hskip 3em}ll}
+\toprule
+\multicolumn{2}{c}{Acoustic simulation} & \multicolumn{2}{c}{PPO} \\
+\midrule
+Rays per click & 2{,}048 & Parallel environments & 14 (one per training scene) \\
+Bounces & 4 & Rollout length & 128 steps \\
+Response length & 0.3\,s (observation uses 0.128\,s) & Epochs / minibatches & 4 / 4 \\
+Sampling rate & 24\,kHz & Learning rate (Adam, $\epsilon=10^{-5}$) & $2.5\times10^{-4}$ \\
+Ambisonic order & 1 & Discount $\gamma$ / GAE $\lambda$ & 0.99 / 0.95 \\
+Bin duration & $1/24000$\,s, sparse reconstruction & Clip range & 0.2 \\
+Absorption (3 bands) & 0.10, 0.20, 0.30 & Entropy / value coefficient & 0.02 / 0.5 \\
+Scattering & 0.05 & Gradient-norm clip & 0.5 \\
+Minimum irradiance & 0.1 & Total steps & 2{,}001{,}664 \\
+Ray tracer & Embree, 1 thread per environment & Auxiliary loss weight & 0.5 (echo agents) \\
+Speed of sound & 340\,m/s & Blank-echo probability & 0.05 \\
+\midrule
+\multicolumn{2}{c}{Environment} & \multicolumn{2}{c}{Rewards (exploration)} \\
+\midrule
+Forward step / turn & 0.25\,m / $10^\circ$ & New \cell{} cell & $+1$ \\
+Agent radius / ear height & 0.1\,m / 1.5\,m & Per step & $-0.01$ \\
+Wall sliding & off & Per collided step & $-0.05$ \\
+Episode length & 300 steps & Per click (learned-beam agents) & $-0.01$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
